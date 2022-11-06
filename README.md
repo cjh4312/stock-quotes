@@ -2,7 +2,9 @@
 因为我喜欢用linux系统，通达信不能跨平台，还看不了全球的指数走势，所以就自己写了一个。
 
 类似通达信一类软件,python+pyside6开发，可以实时看盘，查看全球主要指数，美股和港股的实盘。
+
 A股板块、指数、个股k线均线资料均可查看，搜索。F10资料，主要指标，经营分析，3大报表，板块资金流。
+
 还可以实时语音播报当前各种新闻
 ![Snipaste_2022-11-06_19-20-46](https://user-images.githubusercontent.com/29307274/200167923-75be3496-439d-48f6-8e2b-42c7edffc02f.jpg)
 ![Snipaste_2022-11-06_19-21-27](https://user-images.githubusercontent.com/29307274/200167939-b4401eac-f204-4335-bc96-82d1f71e4251.jpg)
