@@ -1,0 +1,3 @@
+{
+    "files": ["baseInformation.py","threadGetCandle.py","threadNewsReport.py","modelTimeShare.py","stockInformation.py","getDate.py","form.ui","globalVariable.py","threadIndex.py","threadTable.py","modelTableStock.py","placeOrder.py","tableStock.py","drawCandle.py","threadDealTimeShare.py","mainwindow.py","threadRealTime.py","modelAnalysisTable.py","drawTimeShare.py","worldIndex.py","getEastData.py"]
+}
