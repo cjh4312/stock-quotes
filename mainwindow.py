@@ -2,7 +2,7 @@
 import sys,datetime,time
 import pandas as pd
 #import figureCanvas
-import stockInformation,worldIndex,drawTimeShare,drawCandle,globalVariable,getDate,tableStock,baseInformation
+import worldIndex,drawTimeShare,drawCandle,globalVariable,getDate,tableStock,baseInformation
 import threadRealTime,threadDealTimeShare,threadNewsReport,threadGetCandle,threadTable,threadIndex
 from PySide6.QtWidgets import QRadioButton,QMenu,QTextEdit,QApplication,QDateTimeEdit,QMainWindow,QMessageBox,QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLineEdit,QComboBox
 from PySide6.QtGui import QColor,QTextCharFormat,QTextCursor,QFont,QIcon,QAction,QCursor
@@ -75,7 +75,7 @@ class MainWindow(QMainWindow):
         self.text=''
         self.isOpenNewsReport=True
         self.isBoard=False
-
+        self.downloadInfoStart=False
         self.isThreadRealTimeRunning=False
         self.isThreadTimeShareRunning=False
         globalVariable._init()
@@ -84,7 +84,6 @@ class MainWindow(QMainWindow):
         self.downloadInfoTime=self.settings.value("General/curTime")
 
         self.data=getDate.GetData(self.stock_code,self.period,self.adjustflag)
-        self.download_info=stockInformation.StockInformation()
         self.draw_time_share=drawTimeShare.DrawChart(self.high_low_point,self.time_share_chart_data)
         self.draw_candle=drawCandle.DrawChart(self.data.data)
         self.tableView=tableStock.TableStock()
@@ -263,6 +262,7 @@ class MainWindow(QMainWindow):
         self.table_thread2.moveToThread(self.thread2)
         self.table_thread2.start()
         self.table_thread2.finished.connect(self.table_thread2.quit())
+        self.table_thread2._finishSignal.connect(self.download)
 
         self.thread3 = QThread()
         self.real_time_thread3=threadRealTime.RealTimeThread(self)
@@ -307,7 +307,7 @@ class MainWindow(QMainWindow):
         self.tableView.view_my_stock.clicked.connect(self.clicked_my_stock_item)
         self.tableView.view.horizontalHeader().sectionClicked.connect(self.horizontalHeader)
         #self.ui.download_d.triggered.connect(self.data.download_akshare_all_stock)
-        self.ui.download_info.triggered.connect(self.download)
+        self.ui.download_info.triggered.connect(self.downloadStart)
         self.ui.newsReport.triggered.connect(self.set_open_close_news_report)
 
         self.code_text.keyPressEvent=self.codeTextkeyPressEvent
@@ -659,10 +659,9 @@ class MainWindow(QMainWindow):
                     self.baseInformation.circle.setStyleSheet(globalVariable.circle_red_SheetStyle)
                     t=str(datetime.datetime.now())
                     if not globalVariable.isWeekend() and t[0:10]>str(self.downloadInfoTime) and\
-                                    ((t[11:16]>'08:30' and t[11:16]<'13:00') or t[11:16]>'15:05'):
-                        self.download()
-                        self.downloadInfoTime=t[0:10]
-                        self.settings.setValue("General/curTime",self.downloadInfoTime)
+                                    ((t[11:16]>'08:30' and t[11:16]<'13:00') or t[11:16]>'15:05')\
+                                    and not self.downloadInfoStart:
+                        self.downloadStart()
 
         elif globalVariable.marketNum==5 and a==0:
             if globalVariable.isHKMarketDay():
@@ -686,7 +685,7 @@ class MainWindow(QMainWindow):
         if globalVariable.getValue()==3 and globalVariable.isZhMarketDay() and a==0 and \
             self.stock_code[0:4]!='100.' and self.stock_code[0:4]!='103.' and self.stock_code[0:4]!='104.':
             self.find()
-        if not globalVariable.isWeekend() and a==0:
+        if not globalVariable.isWeekend() and a==0 and not self.downloadInfoStart:
             self.table_thread2.start()
         if self.time_count==20:
             if self.isNewsReportStop:
@@ -1383,15 +1382,16 @@ class MainWindow(QMainWindow):
     def set_open_close_news_report(self):
         self.isOpenNewsReport=not self.isOpenNewsReport
         self.ui.newsReport.setChecked(not self.isOpenNewsReport)
-
     def download(self):
         self.prompt_window.show()
-        self.prompt_text.append('开始处理板块信息')
-        self.download_info.deal_with_concept_industry()
-        self.prompt_text.append('板块信息处理完毕')
-        self.prompt_text.append('开始处理个股信息')
-        self.download_info.deal_with_stock_list()
-        self.prompt_text.append('个股信息处理完毕')
+        self.prompt_text.append('板块、个股信息处理完毕')
+        self.downloadInfoTime=str(datetime.datetime.now())[0:10]
+        self.settings.setValue("General/curTime",self.downloadInfoTime)
+    def downloadStart(self):
+        self.downloadInfoStart=True
+        self.prompt_window.show()
+        self.prompt_text.append('开始下载板块、个股信息...请稍等')
+        self.table_thread2.start()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

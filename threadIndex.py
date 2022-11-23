@@ -4,10 +4,12 @@
 #     pass
 from PySide6.QtCore import Signal,QThread
 import globalVariable
+import stockInformation
 
 class IndexThread(QThread):
     #  通过类成员对象定义信号对象
     _signal = Signal()
+    _finishSignal=Signal()
 
     def __init__(self,parent):
         super(IndexThread, self).__init__()
@@ -19,6 +21,11 @@ class IndexThread(QThread):
         self.wait()
 
     def run(self):
+        if self.parent.downloadInfoStart:
+            stockInformation.download()
+            self.parent.downloadInfoStart=False
+            self._finishSignal.emit()
+
         if globalVariable.marketNum==1 or globalVariable.marketNum==3 or globalVariable.marketNum==5 or globalVariable.marketNum==6:
             worldIndexData=self.parent.worldIndex.getAllIndex()
             self.parent.baseInformation.flashLabel(0,worldIndexData)

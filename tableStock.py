@@ -73,8 +73,8 @@ class TableStock(QTableView):
 
     def get_hk_market(self):
         url='http://87.push2.eastmoney.com/api/qt/clist/get?cb=jQuery1124013838806870658193_1667966922146&pn=1&pz=5000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=7111416627128474|0|1|0|web&fid=f3&fs=m:116+t:3,m:116+t:4,m:116+t:1,m:116+t:2&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667966922156'
-        order=['代码','名称','最新价','涨跌幅','换手率','成交额','市盈率','成交量',\
-                 '总市值','流通市值','今年','60日','涨速','最高','最低','今开','昨收']
+        order=['代码','名称','最新价','涨跌幅','换手率','成交额','涨速','市盈率',\
+                 '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
         df=requests.get(url,headers=self.headers).content.decode()
         json_data=re.findall('{"rc":.*}]}}',df)[0]
         self.stock_data=pd.DataFrame(json.loads(json_data)['data']['diff'])
@@ -87,8 +87,8 @@ class TableStock(QTableView):
         self.stock_data[self.stock_data.columns[2:]]=self.stock_data[self.stock_data.columns[2:]].astype(float)
 
     def get_us_market(self):
-        order=['代码','名称','最新价','涨跌幅','换手率','成交额','市盈率','成交量',\
-                 '总市值','流通市值','今年','60日','涨速','最高','最低','今开','昨收']
+        order=['代码','名称','最新价','涨跌幅','换手率','成交额','涨速','市盈率',\
+                 '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
         url='http://3.push2.eastmoney.com/api/qt/clist/get?cb=jQuery1124022612904122108612_1667962034365&pn=1&pz=13000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=7111416627128474|0|1|0|web&fid=f3&fs=m:105,m:106,m:107&fields=f2,f3,f5,f6,f8,f9,f12,f13,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667962034515'
         df=requests.get(url,headers=self.headers).content.decode()
         json_data=re.findall('{"rc":.*}]}}',df)[0]
@@ -103,8 +103,8 @@ class TableStock(QTableView):
 
     def get_zh_market(self):
 
-        order=['代码','名称','最新价','涨跌幅','换手率','成交额','市盈率','成交量',\
-                 '总市值','流通市值','今年','60日','涨速','最高','最低','今开','昨收']
+        order=['代码','名称','最新价','涨跌幅','换手率','成交额','涨速','市盈率',\
+                 '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
         url='http://64.push2.eastmoney.com/api/qt/clist/get?cb=jQuery112406735051047749057_1667954879287&pn=1&pz=6000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=1&wbp2u=7111416627128474|0|1|0|web&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667954879297'
         df=requests.get(url,headers=self.headers).content.decode()
         json_data=re.findall('{"rc":.*}]}}',df)[0]
@@ -124,7 +124,7 @@ class TableStock(QTableView):
             self.my_stock_data.index = pd.RangeIndex(start=1, stop=len(self.my_stock_data)+1, step=1)
         else:
             self.my_stock_data=pd.DataFrame(columns=order)
-        self.rising_speed_data=self.stock_data_copy.sort_values(by=self.stock_data_copy.columns[12] , ascending=False,kind="mergesort")
+        self.rising_speed_data=self.stock_data_copy.sort_values(by=self.stock_data_copy.columns[6] , ascending=False,kind="mergesort")
         self.rising_speed_data=self.rising_speed_data.drop(self.rising_speed_data.index[30:len(self.rising_speed_data)])
         #self.rising_speed_data=self.rising_speed_data.drop(self.stock_data_copy.columns[6:17],axis=1)
         self.rising_speed_data.index = pd.RangeIndex(start=1, stop=len(self.rising_speed_data)+1, step=1)
@@ -265,8 +265,8 @@ class TableStock(QTableView):
         context = ssl._create_unverified_context()
         # 将context传入url函数的context参数中
         request =urllib.request.Request(url,headers=self.headers)
-        data_json=urllib.request.urlopen(request,context=context).readline().decode()
-        self.stock_data=pd.DataFrame(eval(data_json))
+        data=urllib.request.urlopen(request,context=context).readline().decode()
+        self.stock_data=pd.DataFrame(eval(data))
         self.stock_data["date"] = pd.to_datetime(self.stock_data["date"], unit="ms").dt.date
         del self.stock_data["indexCode"]
         self.stock_data.rename(columns={'date':'交易日','close':'收盘价','high20':'20日新高','low20':'20日新低',
@@ -543,7 +543,7 @@ class TableStock(QTableView):
             self.view.setColumnWidth(2,70)
             self.view.setColumnWidth(3,70)
             self.view.setColumnWidth(4,60)
-            self.view.setColumnWidth(5,80)
+            self.view.setColumnWidth(5,85)
             self.view.setColumnWidth(6,65)
             self.view.setColumnWidth(7,70)
             self.view.setColumnWidth(8,90)
@@ -560,7 +560,7 @@ class TableStock(QTableView):
             self.view_rising_speed.setColumnWidth(2,60)
             self.view_rising_speed.setColumnWidth(3,60)
             self.view_rising_speed.setColumnWidth(4,60)
-            self.view_rising_speed.setColumnWidth(5,80)
+            self.view_rising_speed.setColumnWidth(5,85)
             self.view_rising_speed.setColumnWidth(6,65)
             self.view_rising_speed.setColumnWidth(7,70)
             self.view_rising_speed.setColumnWidth(8,90)
@@ -577,7 +577,7 @@ class TableStock(QTableView):
             self.view_my_stock.setColumnWidth(2,70)
             self.view_my_stock.setColumnWidth(3,60)
             self.view_my_stock.setColumnWidth(4,60)
-            self.view_my_stock.setColumnWidth(5,80)
+            self.view_my_stock.setColumnWidth(5,85)
             self.view_my_stock.setColumnWidth(6,65)
             self.view_my_stock.setColumnWidth(7,70)
             self.view_my_stock.setColumnWidth(8,90)
