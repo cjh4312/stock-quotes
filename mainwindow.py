@@ -6,7 +6,7 @@ import worldIndex,drawTimeShare,drawCandle,globalVariable,getDate,tableStock,bas
 import threadRealTime,threadDealTimeShare,threadNewsReport,threadGetCandle,threadTable,threadIndex
 from PySide6.QtWidgets import QRadioButton,QMenu,QTextEdit,QApplication,QDateTimeEdit,QMainWindow,QMessageBox,QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLineEdit,QComboBox
 from PySide6.QtGui import QColor,QTextCharFormat,QTextCursor,QFont,QIcon,QAction,QCursor
-from PySide6.QtCore import QThread,Qt,QTimer,QDateTime,QTime,QSettings
+from PySide6.QtCore import QThread,Qt,QTimer,QDateTime,QTime
 
 # Important:
 # You need to run the following command to generate the ui_form.py file
@@ -73,15 +73,14 @@ class MainWindow(QMainWindow):
         self.fmt=QTextCharFormat()
         self.text1=''
         self.text=''
-        self.isOpenNewsReport=True
         self.isBoard=False
         self.downloadInfoStart=False
-        self.isThreadRealTimeRunning=False
-        self.isThreadTimeShareRunning=False
         globalVariable._init()
         globalVariable.setValue(1)
-        self.settings = QSettings("config.ini", QSettings.IniFormat)
+        self.settings = globalVariable.settings
         self.downloadInfoTime=self.settings.value("General/curTime")
+        self.isOpenNewsReport=eval(self.settings.value("General/newsReport"))
+        self.ui.newsReport.setChecked(not self.isOpenNewsReport)
 
         self.data=getDate.GetData(self.stock_code,self.period,self.adjustflag)
         self.draw_time_share=drawTimeShare.DrawChart(self.high_low_point,self.time_share_chart_data)
@@ -193,6 +192,7 @@ class MainWindow(QMainWindow):
         prompt_window_layout.addWidget(self.prompt_text)
 
         self.right_widget_four=QWidget()
+        self.right_widget_four.setMaximumSize(250,946)
         right_layout_four=QVBoxLayout()
         self.right_widget_four.setLayout(right_layout_four)
         self.period_text=QComboBox()
@@ -202,9 +202,25 @@ class MainWindow(QMainWindow):
         self.eastPlateFlows=QPushButton('东方财富板块资金流')
         self.newHigh_newLow=QPushButton('新高新低数量')
         self.stockHotRank=QPushButton('股票热度、淘股吧')
-        self.dateEdit = QDateTimeEdit(self.curRecentMarketDay())
-
         self.yesterdayStrong=QPushButton('昨日强势股票')
+        self.dateEdit = QDateTimeEdit(self.curRecentMarketDay())
+        self.northPlateFlows=QPushButton('北向资金买入')
+        self.north_box=QComboBox()
+        information=['1日','3日']
+        self.north_box.addItems(information)
+        self.tradedetail=QPushButton('龙虎榜详情')
+        self.tradedetail_text=QComboBox()
+        information=[globalVariable.curRecentMarketDay(),'近3日','近5日','近10日','近30日']
+        self.tradedetail_text.addItems(information)
+        self.business_department=QPushButton('营业部排行')
+        self.business_department_text=QComboBox()
+        information=['近一月','近三月','近半年','近一年']
+        self.business_department_text.addItems(information)
+        self.open_fund=QPushButton('开放式基金排行')
+        self.instruction_text=QTextEdit()
+        self.instruction_text.setReadOnly(True)
+        self.instruction_text.append(self.settings.value("General/northText"))
+
         right_layout_four.addWidget(self.period_text)
         right_layout_four.addWidget(self.eastPlateFlows)
         right_layout_four.addWidget(self.royalFlushPlateFlows)
@@ -212,6 +228,14 @@ class MainWindow(QMainWindow):
         right_layout_four.addWidget(self.stockHotRank)
         right_layout_four.addWidget(self.yesterdayStrong)
         right_layout_four.addWidget(self.dateEdit)
+        right_layout_four.addWidget(self.northPlateFlows)
+        right_layout_four.addWidget(self.north_box)
+        right_layout_four.addWidget(self.tradedetail)
+        right_layout_four.addWidget(self.tradedetail_text)
+        right_layout_four.addWidget(self.business_department)
+        right_layout_four.addWidget(self.business_department_text)
+        right_layout_four.addWidget(self.open_fund)
+        right_layout_four.addWidget(self.instruction_text)
 
         main_layout.addWidget(self.tableView.view,alignment=Qt.AlignTop)
         main_layout.addWidget(self.main2,alignment=Qt.AlignTop)
@@ -225,7 +249,7 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(self.baseInformation.time_share_widget,alignment=Qt.AlignTop)
 
         self.news_data=QTextEdit()
-        self.baseInformation.time_share_tick.setReadOnly(True)
+        self.news_data.setReadOnly(True)
 
         self.news_data.setMaximumHeight(130)
         right_layout.addWidget(self.news_data)
@@ -289,7 +313,6 @@ class MainWindow(QMainWindow):
         #self.news_report_thread5.finished.connect(self.draw_time_share_thread4.quit())
         self.get_candle_thread6._signal.connect(self.draw_candle_chart)
 
-
     def signal_slot(self):
         #信号槽
         self.daily.clicked.connect(self.flag_init)
@@ -323,6 +346,10 @@ class MainWindow(QMainWindow):
         self.newHigh_newLow.clicked.connect(self.financialFlows)
         self.stockHotRank.clicked.connect(self.financialFlows)
         self.yesterdayStrong.clicked.connect(self.financialFlows)
+        self.northPlateFlows.clicked.connect(self.financialFlows)
+        self.business_department.clicked.connect(self.financialFlows)
+        self.open_fund.clicked.connect(self.financialFlows)
+        self.tradedetail.clicked.connect(self.financialFlows)
         for i in range(9):
             self.baseInformation.createVar[f'self.index{i}'].clicked.connect(self.setIndex)
 
@@ -410,7 +437,7 @@ class MainWindow(QMainWindow):
 
     def flash_time_share_tick_data(self):
         #self.baseInformation.flash_time_share_tick_data(self.price,self.pre_close,self.line_len,self.price_len,self.flag_direction,self.flag_pos,self.time_share_data)
-        self.isThreadRealTimeRunning=False
+
         self.baseInformation.time_share_tick.clear()
         if len(self.time_share_data)==0:
             return
@@ -445,7 +472,6 @@ class MainWindow(QMainWindow):
                 cursor.mergeCharFormat(fmt)
 
     def draw_time_share_chart(self):
-        self.isThreadTimeShareRunning=False
         if len(self.time_share_chart_data)==0:
             return
         self.draw_time_share.init(self.high_low_point,self.time_share_chart_data)
@@ -555,7 +581,6 @@ class MainWindow(QMainWindow):
         self.tableView.view.show()
         #self.tableView.setViewWidth()
         self.right_widget.show()
-
         self.right_widget_four.hide()
 
     #资金分析界面
@@ -597,6 +622,22 @@ class MainWindow(QMainWindow):
         elif self.sender()==self.newHigh_newLow:
             globalVariable.subCount=5
             self.isBoard=True
+            self.table_thread.start()
+        elif self.sender()==self.northPlateFlows:
+            globalVariable.subCount=6
+            self.isBoard=False
+            self.table_thread.start()
+        elif self.sender()==self.business_department:
+            globalVariable.subCount=7
+            self.isBoard=False
+            self.table_thread.start()
+        elif self.sender()==self.open_fund:
+            globalVariable.subCount=8
+            self.isBoard=False
+            self.table_thread.start()
+        elif self.sender()==self.tradedetail:
+            globalVariable.subCount=9
+            self.isBoard=False
             self.table_thread.start()
         if globalVariable.marketNum==1:
             globalVariable.marketNum=3
@@ -648,10 +689,8 @@ class MainWindow(QMainWindow):
             if globalVariable.isZhMarketDay():
                 if self.stock_code[0:4]!='100.' or self.stock_code[0:4]!='103.' or self.stock_code[0:4]!='104.':
                     if self.time_count%2==1:
-                        self.isThreadRealTimeRunning=True
                         self.real_time_thread3.start()
                     if a==0:
-                        self.isThreadTimeShareRunning=True
                         self.draw_time_share_thread4.start()
                         self.baseInformation.circle.setStyleSheet(globalVariable.circle_green_SheetStyle)
             else:
@@ -659,8 +698,7 @@ class MainWindow(QMainWindow):
                     self.baseInformation.circle.setStyleSheet(globalVariable.circle_red_SheetStyle)
                     t=str(datetime.datetime.now())
                     if not globalVariable.isWeekend() and t[0:10]>str(self.downloadInfoTime) and\
-                                    ((t[11:16]>'08:30' and t[11:16]<'13:00') or t[11:16]>'15:05')\
-                                    and not self.downloadInfoStart:
+                                    t[11:16]>'09:00' and not self.downloadInfoStart:
                         self.downloadStart()
 
         elif globalVariable.marketNum==5 and a==0:
@@ -680,7 +718,6 @@ class MainWindow(QMainWindow):
                     or (globalVariable.getValue()==1 and globalVariable.isZhMarketDay()) \
                     or (globalVariable.getValue()==5 and globalVariable.isHKMarketDay()))\
                      and a==0:
-
             self.table_thread.start()
         if globalVariable.getValue()==3 and globalVariable.isZhMarketDay() and a==0 and \
             self.stock_code[0:4]!='100.' and self.stock_code[0:4]!='103.' and self.stock_code[0:4]!='104.':
@@ -1231,11 +1268,7 @@ class MainWindow(QMainWindow):
         if globalVariable.getValue()==1:
             self.find_stock_name()
             self.baseInformation.flash_base_information_click(self.cur_item,self.stock_data,self.name)
-            if self.isThreadTimeShareRunning:
-                self.draw_time_share_thread4.wait()
             self.draw_time_share_thread4.start()
-            if self.isThreadRealTimeRunning:
-                self.real_time_thread3.wait()
             self.real_time_thread3.start()
 
         elif globalVariable.getValue()==2 or globalVariable.getValue()==5:
@@ -1255,11 +1288,7 @@ class MainWindow(QMainWindow):
         self.stock_code=self.tableView.rising_speed_data.iat[self.rising_speed,0]
         self.name=self.tableView.rising_speed_data.iat[self.rising_speed,1]
 
-        if self.isThreadTimeShareRunning:
-            self.draw_time_share_thread4.wait()
         self.draw_time_share_thread4.start()
-        if self.isThreadRealTimeRunning:
-            self.real_time_thread3.wait()
         self.real_time_thread3.start()
         self.find_stock_name()
         self.stock_data=self.tableView.rising_speed_data
@@ -1273,11 +1302,7 @@ class MainWindow(QMainWindow):
         self.baseInformation.code_label.setText(self.stock_code)
         self.find_stock_name()
         self.baseInformation.name_label.setText(self.name)
-        if self.isThreadTimeShareRunning:
-            self.draw_time_share_thread4.wait()
         self.draw_time_share_thread4.start()
-        if self.isThreadRealTimeRunning:
-            self.real_time_thread3.wait()
         self.real_time_thread3.start()
 
         self.stock_data=self.tableView.my_stock_data
@@ -1311,6 +1336,9 @@ class MainWindow(QMainWindow):
         if globalVariable.getValue()==4:
             if globalVariable.subCount==1 or globalVariable.subCount==5:
                 QMessageBox.information(self,"提示","只能查看东方板块个股",QMessageBox.Ok)
+                return
+            elif globalVariable.subCount==7 or globalVariable.subCount==8:
+                QMessageBox.information(self,"提示","只能查看板块和个股",QMessageBox.Ok)
                 return
         if self.ui.us_market.isChecked()==True or self.ui.hk_market.isChecked()==True:
             self.name=self.tableView.stock_data.iat[self.cur_item,1]
@@ -1384,13 +1412,13 @@ class MainWindow(QMainWindow):
         self.ui.newsReport.setChecked(not self.isOpenNewsReport)
     def download(self):
         self.prompt_window.show()
-        self.prompt_text.append('板块、个股信息处理完毕')
+        self.prompt_text.append('指数、板块、个股信息处理完毕')
         self.downloadInfoTime=str(datetime.datetime.now())[0:10]
         self.settings.setValue("General/curTime",self.downloadInfoTime)
     def downloadStart(self):
         self.downloadInfoStart=True
         self.prompt_window.show()
-        self.prompt_text.append('开始下载板块、个股信息...请稍等')
+        self.prompt_text.append('开始下载指数、板块、个股信息...请稍等')
         self.table_thread2.start()
 
 if __name__ == "__main__":

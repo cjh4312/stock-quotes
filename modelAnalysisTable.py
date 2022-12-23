@@ -20,8 +20,8 @@ class AnalysisTable(QAbstractTableModel):
     # 显示数据
     def data(self, index, role=Qt.DisplayRole):
         if index.isValid():
+            grid=self._data.iloc[index.row(), index.column()]
             if role == Qt.DisplayRole:
-                grid=self._data.iloc[index.row(), index.column()]
                 if isinstance(grid,float):
                     if float(grid)>=100000000:
                         return str(round(float(grid)/100000000,4))+'亿'
@@ -60,6 +60,10 @@ class AnalysisTable(QAbstractTableModel):
                     return QColor(Qt.blue)
                 elif self._data.iloc[index.row(), 1]=='按产品分':
                     return QColor(255,0,255)
+                #涨红 跌绿
+                elif isinstance(grid,float):
+                   if grid<0:
+                       return QColor(0,191,0)
 
             elif role == Qt.FontRole:
                 if self._data.iloc[index.row(), 2]=='合计':

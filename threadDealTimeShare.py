@@ -5,7 +5,6 @@
 from PySide6 import QtCore
 from PySide6.QtCore import Signal
 import requests
-import json
 from pandas.core.frame import DataFrame
 import globalVariable
 
@@ -20,7 +19,8 @@ class DealTimeShareThread(QtCore.QThread):
 
     def deal_time_share_chart(self):
         code=self.parent.stock_code
-
+        if not code[0:3].isdigit() and code[0:2]!='sh':
+            return
         if code[0:4]=='100.' or code[0:4]=='103.' or code[0:4]=='104.':
             self.isTrue=False
             (self.parent.pre_close,time_share_list)=self.parent.worldIndex.get_index_time_share_chart(code)
@@ -113,9 +113,7 @@ class DealTimeShareThread(QtCore.QThread):
                 stock_code = 'SZ'+code
 
             url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code={}'.format(stock_code)
-            df=requests.get(url,headers=headers).content.decode()
-            d=DataFrame(json.loads(df)['data'])
-            d=d.T
+            d=DataFrame(requests.get(url,headers=headers).json()['data']).T
             l=d.loc['REPORT_DATE_NAME',0]
             list={'一季度':1,'中报':2,'三季报':3,'年报':4}
             A={1:'一',2:'二',3:'三',4:'四',5:'五'}

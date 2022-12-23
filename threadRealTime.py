@@ -6,8 +6,6 @@ from PySide6.QtCore import Signal,QThread
 import globalVariable
 import pandas as pd
 import requests
-import json
-import re
 
 class RealTimeThread(QThread):
     #  通过类成员对象定义信号对象
@@ -40,12 +38,14 @@ class RealTimeThread(QThread):
         code=self.parent.stock_code
         self.data=pd.DataFrame()
         self.isIndex=False
-        if code[0:2]=='BK' or code[0:4]=='100.' or code[0:4]=='103.' or code[0:4]=='104.':
+        if code[0:4]=='100.' or code[0:4]=='103.' or code[0:4]=='104.' or not code[0:2].isdigit():
             self.parent.time_share_data=self.data
             self._signal.emit()
             return
 
         if globalVariable.marketNum==1 or globalVariable.marketNum==3:
+            if code[0:4]=='105.' or code[0:4]=='106.' or code[0:4]=='107.':
+                return
             if code[0]=='3' or code[0]=='0' or code[0]=='8' or code[0]=='4':
                 num=0
                 if code[0:3]=='399':
@@ -58,7 +58,8 @@ class RealTimeThread(QThread):
                     self.isIndex=True
             (self.parent.pre_close,self.data)=self.parent.worldIndex.get_time_share_tick(num,code)
         elif globalVariable.marketNum==2 or globalVariable.marketNum==4:
-            (self.parent.pre_close,self.data)=self.parent.worldIndex.get_us_time_share_tick(code)
+            if code[0:4]=='105.' or code[0:4]=='106.' or code[0:4]=='107.':
+                (self.parent.pre_close,self.data)=self.parent.worldIndex.get_us_time_share_tick(code)
 
     def deal_with_time_share_tick_data(self):
         self.parent.time_share_data=''
@@ -135,17 +136,14 @@ class RealTimeThread(QThread):
         code=self.parent.stock_code
 
         if globalVariable.marketNum==1 or globalVariable.marketNum==3:
-            if code[0:1]=='s' or code[0:3]=='399'  or code[0:2]=='BK' or code[0:2]=='10':
+            if code[0:1]=='s' or code[0:3]=='399'  or code[0:2]=='BK' or code[0:2]=='10' or not code[0:2].isdigit():
                 return
             num=0
             if code[0] == '6':
                 num=1
 
-            url='http://25.push2.eastmoney.com/api/qt/stock/get?ut=fa5fd1943c7b386f172d6893dbfba10b&fltt=2&invt=2&volt=2&fields=f116,f84,f85,f162,f31,f32,f33,f34,f35,f36,f37,f38,f39,f40,f20,f19,f18,f17,f16,f15,f14,f13,f12,f11,f531&secid={}.{}&cb=jQuery35106532922947495909_1666089246961&_=1666089246963'.format(num,code)
-            df=requests.get(url=url,headers=headers).content.decode()
-            new_json_data=re.findall('{"rc":.*}}',df)[0]
-            data=json.loads(new_json_data)['data']
-
+            url='http://25.push2.eastmoney.com/api/qt/stock/get?ut=fa5fd1943c7b386f172d6893dbfba10b&fltt=2&invt=2&volt=2&fields=f116,f84,f85,f162,f31,f32,f33,f34,f35,f36,f37,f38,f39,f40,f20,f19,f18,f17,f16,f15,f14,f13,f12,f11,f531&secid={}.{}&_=1666089246963'.format(num,code)
+            data=requests.get(url=url,headers=headers).json()['data']
             for i in range(0,10,2):
                 if data['f'+str(i+31)]!='' and data['f'+str(i+31)]!='-':
                     if data[f'f{i+31}']>self.parent.pre_close:

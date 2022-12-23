@@ -92,10 +92,10 @@ class BaseInformation():
             self.base_info['self.open_data'].setPalette(globalVariable.pered)
         self.base_info['self.open_data'].setText(f"{data.iat[cur_item,15]}({round((data.iat[cur_item,15]-pre_close)*100/pre_close,2)}%)")
 
-        self.base_info['self.volume_data'].setText(globalVariable.format_conversion(data.iat[cur_item,7]))
+        self.base_info['self.volume_data'].setText(globalVariable.format_conversion(data.iat[cur_item,12]))
         self.base_info['self.amount_data'].setText(globalVariable.format_conversion(data.iat[cur_item,5]))
         self.base_info['self.turn_data'].setText(f"{data.iat[cur_item,4]}%")
-        self.base_info['self.pe_data'].setText(str(data.iat[cur_item,6]))
+        self.base_info['self.pe_data'].setText(str(data.iat[cur_item,7]))
 
     def buy_sell_information(self):
         A={1:'一',2:'二',3:'三',4:'四',5:'五'}

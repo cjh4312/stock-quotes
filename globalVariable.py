@@ -3,9 +3,11 @@
 # if __name__ == "__main__":
 #     pass
 import os,pytz
-from datetime import datetime
+import datetime
 from PySide6.QtGui import QPalette,QColor
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt,QSettings
+
+settings = QSettings("config.ini", QSettings.IniFormat)
 
 def _init():
     global whatInterface
@@ -56,7 +58,7 @@ def getIsNet():
 #是否交易日
 def isWeekend():
     tz = pytz.timezone('Asia/shanghai')
-    date_zh = datetime.now(tz)
+    date_zh = datetime.datetime.now(tz)
     localweek=int(date_zh.strftime('%w'))
     if localweek in [1,2,3,4,5]:
         return False
@@ -65,8 +67,8 @@ def isWeekend():
 
 def isHKMarketDay():
     tz = pytz.timezone('Asia/Hong_Kong')
-    date_zh = datetime.now(tz)
-    Vacation=[1004]
+    date_zh = datetime.datetime.now(tz)
+    Vacation=settings.value("General/Vacation_HK")
     localdate=int(date_zh.strftime('%m%d'))
     localweek=int(date_zh.strftime('%w'))
     localtime=int(date_zh.strftime("%H%M%S"))
@@ -76,8 +78,8 @@ def isHKMarketDay():
         return False
 def isZhMarketDay():
     tz = pytz.timezone('Asia/shanghai')
-    date_zh = datetime.now(tz)
-    Vacation=[912,1003,1004,1005,1006,1007]
+    date_zh = datetime.datetime.now(tz)
+    Vacation=eval(settings.value("General/Vacation_ZH"))
     localdate=int(date_zh.strftime('%m%d'))
     localweek=int(date_zh.strftime('%w'))
     localtime=int(date_zh.strftime("%H%M%S"))
@@ -86,27 +88,35 @@ def isZhMarketDay():
     else:
         return False
 
+def isUSMarketDay():
+    tz = pytz.timezone('America/New_York')
+    date_us = datetime.datetime.now(tz)
+    Vacation=eval(settings.value("General/Vacation_US"))
+    localdate=int(date_us.strftime('%m%d'))
+    localweek=int(date_us.strftime('%w'))
+    localtime=int(date_us.strftime("%H%M%S"))
+    if localdate not in Vacation and localweek in [1,2,3,4,5] and (localtime>=93000 and localtime<=160005):
+        return True
+    else:
+        return False
+
+def curRecentMarketDay():
+    date=datetime.datetime.now()
+    for i in range(15):
+        time=date+datetime.timedelta(days=-i)
+        if isMarketDay(time):
+            break
+    return str(time.date())
+
 def isMarketDay(date_zh):
-    Vacation=[912,1003,1004,1005,1006,1007]
-    local=datetime.now()
+    Vacation=eval(settings.value("General/Vacation_ZH"))
+    local=datetime.datetime.now()
     localdate=int(date_zh.strftime('%m%d'))
     localweek=int(date_zh.strftime('%w'))
     localtime=int(local.strftime("%H%M%S"))
     if localdate not in Vacation and localweek in [1,2,3,4,5]:
         if local==date_zh and localtime<150000:
             return False
-        return True
-    else:
-        return False
-
-def isUSMarketDay():
-    tz = pytz.timezone('America/New_York')
-    date_us = datetime.now(tz)
-    Vacation=[1124,1226]
-    localdate=int(date_us.strftime('%m%d'))
-    localweek=int(date_us.strftime('%w'))
-    localtime=int(date_us.strftime("%H%M%S"))
-    if localdate not in Vacation and localweek in [1,2,3,4,5] and (localtime>=93000 and localtime<=160005):
         return True
     else:
         return False

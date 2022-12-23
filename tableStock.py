@@ -9,15 +9,12 @@ from PySide6.QtWidgets import QTableView,QAbstractItemView,QMessageBox
 import modelTableStock
 #import modelZHTableStock
 import modelAnalysisTable
-import modelTimeShare
 import globalVariable
 import requests
-import json
-import re
 #import jsonpath
 #import math
 from pandas.core.frame import DataFrame
-import urllib
+import datetime
 
 class TableStock(QTableView):
     def __init__(self):
@@ -32,7 +29,6 @@ class TableStock(QTableView):
         self.view.horizontalScrollBar().setStyleSheet("QScrollBar{width:0px;}")
         #self.view.setSelectionMode(QAbstractItemView.NoSelection)
         self.view2=QTableView()
-        self.view3=QTableView()
         self.view_rising_speed=QTableView()
         self.view_rising_speed.verticalScrollBar().setStyleSheet("QScrollBar{width:0px;}")
         self.view_rising_speed.horizontalScrollBar().setStyleSheet("QScrollBar{width:0px;}")
@@ -45,12 +41,12 @@ class TableStock(QTableView):
 
         self.view.verticalHeader().setMinimumSectionSize(21)
         self.view.verticalHeader().setDefaultSectionSize(21)
+
         self.view_rising_speed.verticalHeader().setMinimumSectionSize(25)
         self.view_rising_speed.verticalHeader().setDefaultSectionSize(25)
         self.view_my_stock.verticalHeader().setMaximumSectionSize(25)
         self.view_my_stock.verticalHeader().setDefaultSectionSize(25)
-        self.view3.verticalHeader().setMinimumSectionSize(20)
-        self.view3.verticalHeader().setDefaultSectionSize(20)
+
         #表格标题字体加粗
         font = self.view.horizontalHeader().font()
         font.setBold(True)
@@ -70,50 +66,39 @@ class TableStock(QTableView):
         self.headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
         self.period1='2022-09-30%2C2022-06-30%2C2022-03-31%2C2021-12-31%2C2021-09-30'
         self.period2='2021-06-30%2C2021-03-31%2C2020-12-31%2C2020-09-30%2C2020-06-30'
+        self.order=['代码','名称','最新价','涨跌幅','换手率','成交额','涨速','市盈率',\
+                 '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
 
     def get_hk_market(self):
-        url='http://87.push2.eastmoney.com/api/qt/clist/get?cb=jQuery1124013838806870658193_1667966922146&pn=1&pz=5000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=7111416627128474|0|1|0|web&fid=f3&fs=m:116+t:3,m:116+t:4,m:116+t:1,m:116+t:2&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667966922156'
-        order=['代码','名称','最新价','涨跌幅','换手率','成交额','涨速','市盈率',\
-                 '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
-        df=requests.get(url,headers=self.headers).content.decode()
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        self.stock_data=pd.DataFrame(json.loads(json_data)['data']['diff'])
+        url='http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=5000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:116+t:3,m:116+t:4,m:116+t:1,m:116+t:2&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667966922156'
+        self.stock_data=pd.DataFrame(requests.Session().get(url,headers=self.headers).json()['data']['diff'])
         self.stock_data.rename(columns={'f12':'代码','f14':'名称','f15':'最高','f2':'最新价','f3':'涨跌幅',\
               'f5':'成交量','f6':'成交额','f16':'最低','f17':'今开','f8':'换手率','f9':'市盈率','f18':'昨收',\
               'f20':'总市值','f21':'流通市值','f22':'涨速','f24':'60日','f25':'今年'},inplace=True)
         #self.stock_data.rename(columns={'市盈率-动态':'市盈率','年初至今涨跌幅':'今年','60日涨跌幅':'60日'},inplace=True)
-        self.stock_data=self.stock_data[order]
+        self.stock_data=self.stock_data[self.order]
         self.stock_data=self.stock_data.replace('-',0)
         self.stock_data[self.stock_data.columns[2:]]=self.stock_data[self.stock_data.columns[2:]].astype(float)
 
     def get_us_market(self):
-        order=['代码','名称','最新价','涨跌幅','换手率','成交额','涨速','市盈率',\
-                 '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
-        url='http://3.push2.eastmoney.com/api/qt/clist/get?cb=jQuery1124022612904122108612_1667962034365&pn=1&pz=13000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=7111416627128474|0|1|0|web&fid=f3&fs=m:105,m:106,m:107&fields=f2,f3,f5,f6,f8,f9,f12,f13,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667962034515'
-        df=requests.get(url,headers=self.headers).content.decode()
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        self.stock_data=pd.DataFrame(json.loads(json_data)['data']['diff'])
+        url='http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=13000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:105,m:106,m:107&fields=f2,f3,f5,f6,f8,f9,f12,f13,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667962034515'
+        self.stock_data=pd.DataFrame(requests.Session().get(url,headers=self.headers).json()['data']['diff'])
         self.stock_data.rename(columns={'f14':'名称','f15':'最高','f2':'最新价','f3':'涨跌幅',\
               'f5':'成交量','f6':'成交额','f16':'最低','f17':'今开','f8':'换手率','f9':'市盈率','f18':'昨收',\
               'f20':'总市值','f21':'流通市值','f22':'涨速','f24':'60日','f25':'今年'},inplace=True)
         self.stock_data['代码']=self.stock_data['f13'].map(str)+'.'+self.stock_data['f12']
-        self.stock_data=self.stock_data[order]
+        self.stock_data=self.stock_data[self.order]
         self.stock_data=self.stock_data.replace('-',0)
         self.stock_data[self.stock_data.columns[2:]]=self.stock_data[self.stock_data.columns[2:]].astype(float)
 
     def get_zh_market(self):
-
-        order=['代码','名称','最新价','涨跌幅','换手率','成交额','涨速','市盈率',\
-                 '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
-        url='http://64.push2.eastmoney.com/api/qt/clist/get?cb=jQuery112406735051047749057_1667954879287&pn=1&pz=6000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=1&wbp2u=7111416627128474|0|1|0|web&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667954879297'
-        df=requests.get(url,headers=self.headers).content.decode()
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        self.stock_data=pd.DataFrame(json.loads(json_data)['data']['diff'])
+        url='http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=6000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=1&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667954879297'
+        self.stock_data=pd.DataFrame(requests.Session().get(url,headers=self.headers).json()['data']['diff'])
         self.stock_data.rename(columns={'f14':'名称','f12':'代码','f15':'最高','f2':'最新价','f3':'涨跌幅',\
               'f5':'成交量','f6':'成交额','f16':'最低','f17':'今开','f8':'换手率','f9':'市盈率','f18':'昨收',\
               'f20':'总市值','f21':'流通市值','f22':'涨速','f24':'60日','f25':'今年'},inplace=True)
-        self.stock_data=self.stock_data[order]
-        self.stock_data=self.stock_data.replace('-',0)
+        self.stock_data=self.stock_data[self.order]
+        #self.stock_data=self.stock_data.replace('-',0)
         self.stock_data[self.stock_data.columns[2:]]=self.stock_data[self.stock_data.columns[2:]].astype(float)
         #self.stock_data[['最新价','涨跌幅','换手率','市盈率','涨速','60日','今年','最高','最低','今开','昨收']]=self.stock_data[['最新价','涨跌幅','换手率','市盈率','涨速','60日','今年','最高','最低','今开','昨收']]/100
         self.stock_data_copy=self.stock_data.copy(deep=True)
@@ -123,29 +108,38 @@ class TableStock(QTableView):
             self.my_stock_data.drop(self.my_stock_data.columns[[0]],axis=1,inplace=True)
             self.my_stock_data.index = pd.RangeIndex(start=1, stop=len(self.my_stock_data)+1, step=1)
         else:
-            self.my_stock_data=pd.DataFrame(columns=order)
+            self.my_stock_data=pd.DataFrame(columns=self.order)
         self.rising_speed_data=self.stock_data_copy.sort_values(by=self.stock_data_copy.columns[6] , ascending=False,kind="mergesort")
-        self.rising_speed_data=self.rising_speed_data.drop(self.rising_speed_data.index[30:len(self.rising_speed_data)])
+        self.rising_speed_data=self.rising_speed_data[0:30]
         #self.rising_speed_data=self.rising_speed_data.drop(self.stock_data_copy.columns[6:17],axis=1)
         self.rising_speed_data.index = pd.RangeIndex(start=1, stop=len(self.rising_speed_data)+1, step=1)
 
     def pick_stocks(self):
         if globalVariable.getValue()==1:
-            order=['代码','名称','最新价','涨跌幅','换手率','成交额','市盈率','成交量',\
-                     '总市值','流通市值','今年','60日','涨速','最高','最低','今开','昨收']
-            data=pd.DataFrame(columns=order)
+            data=pd.DataFrame(columns=self.order)
             for i in range(1,len(self.stock_data_copy)+1):
+                t=False
                 c=self.stock_data_copy.loc[i,'最新价']
                 C=self.stock_data_copy.loc[i,'昨收']
+                l=self.stock_data_copy.loc[i,'最低']
+                o=self.stock_data_copy.loc[i,'今开']
                 from decimal import Decimal, ROUND_HALF_UP
+                #没有交易，涨停的股去除
                 if c==0 or float(Decimal(str(C*1.1)).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP))==c or\
-                        float(Decimal(str(C*1.2)).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP))==c:
+                    float(Decimal(str(C*1.2)).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP))==c or\
+                    self.stock_data_copy.loc[i,'名称'][0:1]=='*' or self.stock_data_copy.loc[i,'名称'][0:1]=='s' or\
+                    self.stock_data_copy.loc[i,'名称'][0:1]=='S':
                     continue
                 H=self.stock_data_copy.loc[i,'最高']
+                #收盘涨幅超过2.5且接近最高
                 if (H-c)/c<=0.003 and self.stock_data_copy.loc[i,'涨跌幅']>=2.5:
-                    if (self.stock_data_copy.loc[i,'名称'][0:1]!='*' and self.stock_data_copy.loc[i,'名称'][0:1]!='s' and\
-                            self.stock_data_copy.loc[i,'名称'][0:1]!='S'):
-                        data.loc[len(data)+1]=self.stock_data_copy.loc[i]
+                    t=True
+                    data.loc[len(data)+1]=self.stock_data_copy.loc[i]
+                if c>o:
+                    c=o
+                #收盘下阴线超过3%
+                if (c-l)/c>=0.03 and not t:
+                    data.loc[len(data)+1]=self.stock_data_copy.loc[i]
             self.stock_data=data.sort_values(by=data.columns[3] , ascending=False,kind="mergesort")
             self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
             self.model = modelTableStock.ModelTableStock(self.stock_data)
@@ -154,18 +148,14 @@ class TableStock(QTableView):
             QMessageBox.information(self,"提示","只能选A股或者在主界面",QMessageBox.Ok)
 
     def get_industry_concept_board(self,code):
-        url='http://38.push2.eastmoney.com/api/qt/clist/get?cb=jQuery1124026009176356636043_1665552114816&pn=1&pz=2000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=|0|0|0|web&fid=f3&fs=b:{}+f:!50&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1665552114833'.format(code)
-        df=requests.get(url,headers=self.headers).content.decode()
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        self.stock_data=DataFrame(json.loads(json_data)['data']['diff'])
+        url='http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=2000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=|0|0|0|web&fid=f3&fs=b:{}+f:!50&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1665552114833'.format(code)
+        self.stock_data=DataFrame(requests.get(url,headers=self.headers).json()['data']['diff'])
         self.stock_data=self.stock_data.replace('-',0)
-        order=['代码','名称','最新价','涨跌幅','换手率','成交额','市盈率','成交量',\
-                       '总市值','流通市值','涨速','60日','今年','最高','最低','今开','昨收']
         self.stock_data.rename(columns={'f12':'代码','f14':'名称','f2':'最新价','f3':'涨跌幅',\
                 'f5':'成交量','f6':'成交额','f15':'最高','f16':'最低','f17':'今开','f18':'昨收',\
                 'f20':'总市值','f21':'流通市值','f8':'换手率','f9':'市盈率','f22':'涨速','f24':'60日',\
                 'f25':'今年'},inplace=True)
-        self.stock_data=self.stock_data[order]
+        self.stock_data=self.stock_data[self.order]
         self.stock_data[self.stock_data.columns[2:]]=self.stock_data[self.stock_data.columns[2:]].astype(float)
         self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
         self.model = modelTableStock.ModelTableStock(self.stock_data)
@@ -185,18 +175,12 @@ class TableStock(QTableView):
         self.model=modelAnalysisTable.AnalysisTable(self.stock_data1)
 
     def getTodayEastPlateFundFlow(self):
-        url2='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery1123036618177432266985_1668003086708&fid=f62&po=1&pz=50&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A1&fields=f12%2Cf14%2Cf2%2Cf3%2Cf62%2Cf184%2Cf66%2Cf69%2Cf72%2Cf75%2Cf78%2Cf81%2Cf84%2Cf87%2Cf204%2Cf205%2Cf124%2Cf1%2Cf13'
-        url1='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery1123036618177432266985_1668003086708&fid=f62&po=1&pz=500&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A3&fields=f12%2Cf14%2Cf2%2Cf3%2Cf62%2Cf184%2Cf66%2Cf69%2Cf72%2Cf75%2Cf78%2Cf81%2Cf84%2Cf87%2Cf204%2Cf205%2Cf124%2Cf1%2Cf13'
-        url3='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112303648106282688208_1667998184612&fid=f62&po=1&pz=100&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A2&fields=f12%2Cf14%2Cf2%2Cf3%2Cf62%2Cf184%2Cf66%2Cf69%2Cf72%2Cf75%2Cf78%2Cf81%2Cf84%2Cf87%2Cf204%2Cf205%2Cf124%2Cf1%2Cf13'
-        df=requests.get(url3,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data1=pd.DataFrame(json.loads(json_data)['data']['diff'])
-        df=requests.get(url1,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data2=pd.DataFrame(json.loads(json_data)['data']['diff'])
-        df=requests.get(url2,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data3=pd.DataFrame(json.loads(json_data)['data']['diff'])
+        url2='https://push2.eastmoney.com/api/qt/clist/get?fid=f62&po=1&pz=50&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A1&fields=f12%2Cf14%2Cf2%2Cf3%2Cf62%2Cf184%2Cf66%2Cf69%2Cf72%2Cf75%2Cf78%2Cf81%2Cf84%2Cf87%2Cf204%2Cf205%2Cf124%2Cf1%2Cf13'
+        url1='https://push2.eastmoney.com/api/qt/clist/get?fid=f62&po=1&pz=500&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A3&fields=f12%2Cf14%2Cf2%2Cf3%2Cf62%2Cf184%2Cf66%2Cf69%2Cf72%2Cf75%2Cf78%2Cf81%2Cf84%2Cf87%2Cf204%2Cf205%2Cf124%2Cf1%2Cf13'
+        url3='https://push2.eastmoney.com/api/qt/clist/get?fid=f62&po=1&pz=100&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A2&fields=f12%2Cf14%2Cf2%2Cf3%2Cf62%2Cf184%2Cf66%2Cf69%2Cf72%2Cf75%2Cf78%2Cf81%2Cf84%2Cf87%2Cf204%2Cf205%2Cf124%2Cf1%2Cf13'
+        stock_data1=pd.DataFrame(requests.get(url3,headers=self.headers).json()['data']['diff'])
+        stock_data2=pd.DataFrame(requests.get(url1,headers=self.headers).json()['data']['diff'])
+        stock_data3=pd.DataFrame(requests.get(url2,headers=self.headers).json()['data']['diff'])
         self.stock_data1=pd.concat([stock_data1,stock_data2,stock_data3])
         self.stock_data1.rename(columns={'f14':'名称','f3':'涨跌幅','f62':'主力净额','f184':'主力净占比','f66':'超大单净额','f69':'超大单净占比','f72':'大单净额','f75':'大单净占比','f78':'中单净额','f81':'中单净占比','f84':'小单净额','f87':'小单净占比','f204':'主力净流入最大股'},inplace=True)
         order=['名称','涨跌幅','主力净额','主力净占比','超大单净额','超大单净占比','大单净额','大单净占比','中单净额','中单净占比','小单净额','小单净占比','主力净流入最大股']
@@ -206,18 +190,15 @@ class TableStock(QTableView):
         self.model=modelAnalysisTable.AnalysisTable(self.stock_data1)
 
     def getFiveEastPlateFundFlow(self):
-        url1='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112309254256237089538_1668582525261&fid=f109&po=1&pz=50&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A1&fields=f12%2Cf14%2Cf2%2Cf109%2Cf164%2Cf165%2Cf166%2Cf167%2Cf168%2Cf169%2Cf170%2Cf171%2Cf172%2Cf173%2Cf257%2Cf258%2Cf124%2Cf1%2Cf13'
-        url2='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112309254256237089538_1668582525259&fid=f109&po=1&pz=500&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A3&fields=f12%2Cf14%2Cf2%2Cf109%2Cf164%2Cf165%2Cf166%2Cf167%2Cf168%2Cf169%2Cf170%2Cf171%2Cf172%2Cf173%2Cf257%2Cf258%2Cf124%2Cf1%2Cf13'
-        url3='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112309254256237089538_1668582525259&fid=f109&po=1&pz=100&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A2&fields=f12%2Cf14%2Cf2%2Cf109%2Cf164%2Cf165%2Cf166%2Cf167%2Cf168%2Cf169%2Cf170%2Cf171%2Cf172%2Cf173%2Cf257%2Cf258%2Cf124%2Cf1%2Cf13'
-        df=requests.get(url3,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data1=pd.DataFrame(json.loads(json_data)['data']['diff'])
-        df=requests.get(url1,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data2=pd.DataFrame(json.loads(json_data)['data']['diff'])
-        df=requests.get(url2,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data3=pd.DataFrame(json.loads(json_data)['data']['diff'])
+        url1='https://push2.eastmoney.com/api/qt/clist/get?fid=f109&po=1&pz=50&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A1&fields=f12%2Cf14%2Cf2%2Cf109%2Cf164%2Cf165%2Cf166%2Cf167%2Cf168%2Cf169%2Cf170%2Cf171%2Cf172%2Cf173%2Cf257%2Cf258%2Cf124%2Cf1%2Cf13'
+        url2='https://push2.eastmoney.com/api/qt/clist/get?fid=f109&po=1&pz=500&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A3&fields=f12%2Cf14%2Cf2%2Cf109%2Cf164%2Cf165%2Cf166%2Cf167%2Cf168%2Cf169%2Cf170%2Cf171%2Cf172%2Cf173%2Cf257%2Cf258%2Cf124%2Cf1%2Cf13'
+        url3='https://push2.eastmoney.com/api/qt/clist/get?fid=f109&po=1&pz=100&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A2&fields=f12%2Cf14%2Cf2%2Cf109%2Cf164%2Cf165%2Cf166%2Cf167%2Cf168%2Cf169%2Cf170%2Cf171%2Cf172%2Cf173%2Cf257%2Cf258%2Cf124%2Cf1%2Cf13'
+        df=requests.get(url3,headers=self.headers)
+        stock_data1=pd.DataFrame(df.json()['data']['diff'])
+        df=requests.get(url1,headers=self.headers)
+        stock_data2=pd.DataFrame(df.json()['data']['diff'])
+        df=requests.get(url2,headers=self.headers)
+        stock_data3=pd.DataFrame(df.json()['data']['diff'])
         self.stock_data1=pd.concat([stock_data1,stock_data2,stock_data3])
         self.stock_data1.rename(columns={'f14':'名称','f109':'5日涨跌幅','f164':'主力净额','f165':'主力净占比','f166':'超大单净额','f167':'超大单净占比','f168':'大单净额','f169':'大单净占比','f170':'中单净额','f171':'中单净占比','f172':'小单净额','f173':'小单净占比','f257':'主力净流入最大股'},inplace=True)
         order=['名称','5日涨跌幅','主力净额','主力净占比','超大单净额','超大单净占比','大单净额','大单净占比','中单净额','中单净占比','小单净额','小单净占比','主力净流入最大股']
@@ -227,18 +208,15 @@ class TableStock(QTableView):
         self.model=modelAnalysisTable.AnalysisTable(self.stock_data1)
 
     def getTenEastPlateFundFlow(self):
-        url3='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112309254256237089538_1668582525259&fid=f160&po=1&pz=100&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A2&fields=f12%2Cf14%2Cf2%2Cf160%2Cf174%2Cf175%2Cf176%2Cf177%2Cf178%2Cf179%2Cf180%2Cf181%2Cf182%2Cf183%2Cf260%2Cf261%2Cf124%2Cf1%2Cf13'
-        url1='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112309254256237089538_1668582525261&fid=f160&po=1&pz=500&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A3&fields=f12%2Cf14%2Cf2%2Cf160%2Cf174%2Cf175%2Cf176%2Cf177%2Cf178%2Cf179%2Cf180%2Cf181%2Cf182%2Cf183%2Cf260%2Cf261%2Cf124%2Cf1%2Cf13'
-        url2='https://push2.eastmoney.com/api/qt/clist/get?cb=jQuery112309254256237089538_1668582525259&fid=f160&po=1&pz=50&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A1&fields=f12%2Cf14%2Cf2%2Cf160%2Cf174%2Cf175%2Cf176%2Cf177%2Cf178%2Cf179%2Cf180%2Cf181%2Cf182%2Cf183%2Cf260%2Cf261%2Cf124%2Cf1%2Cf13'
-        df=requests.get(url3,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data1=pd.DataFrame(json.loads(json_data)['data']['diff'])
-        df=requests.get(url1,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data2=pd.DataFrame(json.loads(json_data)['data']['diff'])
-        df=requests.get(url2,headers=self.headers).text
-        json_data=re.findall('{"rc":.*}]}}',df)[0]
-        stock_data3=pd.DataFrame(json.loads(json_data)['data']['diff'])
+        url3='https://push2.eastmoney.com/api/qt/clist/get?fid=f160&po=1&pz=100&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A2&fields=f12%2Cf14%2Cf2%2Cf160%2Cf174%2Cf175%2Cf176%2Cf177%2Cf178%2Cf179%2Cf180%2Cf181%2Cf182%2Cf183%2Cf260%2Cf261%2Cf124%2Cf1%2Cf13'
+        url1='https://push2.eastmoney.com/api/qt/clist/get?fid=f160&po=1&pz=500&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A3&fields=f12%2Cf14%2Cf2%2Cf160%2Cf174%2Cf175%2Cf176%2Cf177%2Cf178%2Cf179%2Cf180%2Cf181%2Cf182%2Cf183%2Cf260%2Cf261%2Cf124%2Cf1%2Cf13'
+        url2='https://push2.eastmoney.com/api/qt/clist/get?fid=f160&po=1&pz=50&pn=1&np=1&fltt=2&invt=2&ut=b2884a393a59ad64002292a3e90d46a5&fs=m%3A90+t%3A1&fields=f12%2Cf14%2Cf2%2Cf160%2Cf174%2Cf175%2Cf176%2Cf177%2Cf178%2Cf179%2Cf180%2Cf181%2Cf182%2Cf183%2Cf260%2Cf261%2Cf124%2Cf1%2Cf13'
+        df=requests.get(url3,headers=self.headers)
+        stock_data1=pd.DataFrame(df.json()['data']['diff'])
+        df=requests.get(url1,headers=self.headers)
+        stock_data2=pd.DataFrame(df.json()['data']['diff'])
+        df=requests.get(url2,headers=self.headers)
+        stock_data3=pd.DataFrame(df.json()['data']['diff'])
         self.stock_data1=pd.concat([stock_data1,stock_data2,stock_data3])
         self.stock_data1.rename(columns={'f14':'名称','f160':'10日涨跌幅','f174':'主力净额','f175':'主力净占比','f176':'超大单净额','f177':'超大单净占比','f178':'大单净额','f179':'大单净占比','f180':'中单净额','f181':'中单净占比','f182':'小单净额','f183':'小单净占比','f260':'主力净流入最大股'},inplace=True)
         order=['名称','10日涨跌幅','主力净额','主力净占比','超大单净额','超大单净占比','大单净额','大单净占比','中单净额','中单净占比','小单净额','小单净占比','主力净流入最大股']
@@ -260,19 +238,53 @@ class TableStock(QTableView):
     def get_high_low_statistics(self):
         #order=['交易日','收盘价','20日新高','20日新低','60日新高','60日新低','120日新高','120日新低']
         url = "https://www.legulegu.com/stockdata/member-ship/get-high-low-statistics/all"
-        import ssl
-        # 使用ssl创建未验证的上下文，在url中传入上下文参数
-        context = ssl._create_unverified_context()
-        # 将context传入url函数的context参数中
-        request =urllib.request.Request(url,headers=self.headers)
-        data=urllib.request.urlopen(request,context=context).readline().decode()
-        self.stock_data=pd.DataFrame(eval(data))
+#        import ssl
+#        # 使用ssl创建未验证的上下文，在url中传入上下文参数
+#        context = ssl._create_unverified_context()
+#        # 将context传入url函数的context参数中
+#        request =urllib.request.Request(url,headers=self.headers)
+#        data=urllib.request.urlopen(request,context=context).readline().decode()
+
+        df =requests.get(url,headers=self.headers).text
+#        data=pd.DataFrame(eval(df))
+        self.stock_data=pd.DataFrame(eval(df))
         self.stock_data["date"] = pd.to_datetime(self.stock_data["date"], unit="ms").dt.date
         del self.stock_data["indexCode"]
         self.stock_data.rename(columns={'date':'交易日','close':'收盘价','high20':'20日新高','low20':'20日新低',
                                     'high60':'60日新高','low60':'60日新低','high120':'120日新高',
                                     'low120':'120日新低'},inplace=True)
         #self.stock_data.sort_values(by=self.stock_data.columns[0],ascending=False,kind="mergesort",inplace=True)
+        self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
+        self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
+
+#    def north_plate_flows(self):
+#        url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=ADD_MARKET_CAP&sortTypes=-1&pageSize=2000&pageNumber=1&reportName=RPT_MUTUAL_STOCK_NORTHSTA&columns=ALL&source=WEB&client=WEB&filter=(TRADE_DATE%3D%272022-12-16%27)(INTERVAL_TYPE%3D%221%22)'
+#        dd=requests.get(url,headers=self.headers)
+#        df=pd.DataFrame(dd.json()['result']['data'])
+#        self.stock_data=df[['SECURITY_CODE','SECURITY_NAME','CLOSE_PRICE','CHANGE_RATE','HOLD_SHARES',\
+#              'HOLD_MARKET_CAP','FREE_SHARES_RATIO','TOTAL_SHARES_RATIO',\
+#              'ADD_SHARES_REPAIR','ADD_MARKET_CAP','ADD_SHARES_AMP',\
+#              'FREECAP_RATIO_CHG','TOTAL_RATIO_CHG','AREA_NAME']]
+#        self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
+#        self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
+
+    def north_plate_flows(self,days):
+        url='https://legulegu.com/stockdata/hk-hold-sort'
+        df =requests.get(url,headers=self.headers)
+        soup = pd.read_html(df.text)
+        for i in range(6):
+            del soup[i]['排名']
+            if i%2==0:
+                soup[i].columns=['股票代码','股票名称',f'{soup[i].columns[2][0:5]}增仓','增仓市值(万元)','涨跌幅']
+            else:
+                soup[i].columns=soup[1].columns
+            for j in range(len(soup[i])):
+                soup[i].loc[j,'股票代码']=str(soup[i].loc[j,'股票代码']).zfill(6)
+            soup[i].loc[len(soup[i])]=''
+        if days=='1日':
+            self.stock_data=pd.concat([soup[0],soup[2],soup[4]])
+        else:
+            self.stock_data=pd.concat([soup[1],soup[3],soup[5]])
         self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
         self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
 
@@ -291,6 +303,159 @@ class TableStock(QTableView):
         self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
         self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
 
+    #开放式基金排行
+    def fund_open_fund_rank(self):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
+            "Referer": "http://fund.eastmoney.com/fundguzhi.html",
+        }
+        url='http://fund.eastmoney.com/data/rankhandler.aspx'
+        type_map = {
+            "全部": ["all", "zzf"],
+            "股票型": ["gp", "6yzf"],
+            "混合型": ["hh", "6yzf"],
+            "债券型": ["zq", "6yzf"],
+            "指数型": ["zs", "6yzf"],
+            "QDII": ["qdii", "6yzf"],
+            "LOF": ["lof", "6yzf"],
+            "FOF": ["fof", "6yzf"],
+        }
+        symbol='全部'
+        current_date = datetime.datetime.now().date().isoformat()
+        last_date = str(int(current_date[:4]) - 1) + current_date[4:]
+        params = {
+            "op": "ph",
+            "dt": "kf",
+            "ft": type_map[symbol][0],
+            "rs": "",
+            "gs": "0",
+            "sc": type_map[symbol][1],
+            "st": "desc",
+            "sd": last_date,
+            "ed": current_date,
+            "qdii": "",
+            "tabSubtype": ",,,,,",
+            "pi": "1",
+            "pn": "20000",
+            "dx": "1",
+            "v": "0.1591891419018292",
+        }
+        dd = requests.get(url, headers=headers,params=params).text
+        json_data = pd.DataFrame(eval(dd[dd.find("[") : dd.find("]")+1]))
+        self.stock_data = json_data.iloc[:, 0].str.split(",", expand=True)
+        self.stock_data.columns = [
+            "基金代码",
+            "基金简称",
+            "_",
+            "日期",
+            "单位净值",
+            "累计净值",
+            "日增长率",
+            "近1周",
+            "近1月",
+            "近3月",
+            "近6月",
+            "近1年",
+            "近2年",
+            "近3年",
+            "今年来",
+            "成立来",
+            "_",
+            "_",
+            "自定义",
+            "_",
+            "手续费",
+            "_",
+            "_",
+            "_",
+            "_",
+        ]
+        self.stock_data = self.stock_data[
+                [
+                    "基金代码",
+                    "基金简称",
+                    "日期",
+                    "单位净值",
+                    "累计净值",
+                    "日增长率",
+                    "近1周",
+                    "近1月",
+                    "近3月",
+                    "近6月",
+                    "近1年",
+                    "近2年",
+                    "近3年",
+                    "今年来",
+                    "成立来",
+                    "自定义",
+                    "手续费",
+                ]
+            ]
+        self.stock_data=self.stock_data.replace('',0)
+        self.stock_data[self.stock_data.columns[3:16]]=self.stock_data[self.stock_data.columns[3:16]].astype(float)
+        self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
+        self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
+
+    #营业部排行
+    def business_department_rank(self,num):
+        self.stock_data=pd.DataFrame()
+        for i in range(1,4):
+            url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=TOTAL_BUYER_SALESTIMES_1DAY%2COPERATEDEPT_CODE&sortTypes=-1%2C1&pageSize=500&pageNumber={}&reportName=RPT_RATEDEPT_RETURNT_RANKING&columns=ALL&source=WEB&client=WEB&filter=(STATISTICSCYCLE%3D%220{}%22)'.format(i,num)
+            dd = requests.get(url, headers=self.headers)
+            df=pd.DataFrame(dd.json()['result']['data'])
+            del df['OPERATEDEPT_CODE']
+            del df['STATISTICSCYCLE']
+            del df['OPERATEDEPT_CODE_OLD']
+            self.stock_data=pd.concat([self.stock_data,df])
+        self.stock_data.columns=['营业部名称',
+                      '1涨幅','1涨概率','1买次数',
+                      '2涨幅','2涨概率','2买次数',
+                      '3涨幅','3涨概率','3买次数',
+                      '5涨幅','5涨概率','5买次数',
+                      '10涨幅','10涨概率','10买次数']
+        self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
+        self.stock_data[self.stock_data.columns[1:15]]=self.stock_data[self.stock_data.columns[1:15]].astype(float)
+        self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
+    #龙虎榜详情
+    def tradedetail(self,nums,pages):
+        end_date=start_date=datetime.datetime.now()
+        count=0
+        for i in range(60):
+            time=start_date+datetime.timedelta(days=-i)
+            if globalVariable.isMarketDay(time):
+                count+=1
+                if count==1:
+                    end_date=time
+                if count==nums:
+                    start_date=time
+                    break
+        end_date=str(end_date.date())
+        start_date=str(start_date.date())
+        self.stock_data=pd.DataFrame()
+        for i in range(1,pages+1):
+            url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=BILLBOARD_NET_AMT%2CTRADE_DATE%2CSECURITY_CODE&sortTypes=-1%2C-1%2C1&pageSize=500&pageNumber={}&reportName=RPT_DAILYBILLBOARD_DETAILSNEW&columns=SECURITY_CODE%2CSECUCODE%2CSECURITY_NAME_ABBR%2CTRADE_DATE%2CEXPLAIN%2CCLOSE_PRICE%2CCHANGE_RATE%2CBILLBOARD_NET_AMT%2CBILLBOARD_BUY_AMT%2CBILLBOARD_SELL_AMT%2CBILLBOARD_DEAL_AMT%2CACCUM_AMOUNT%2CDEAL_NET_RATIO%2CDEAL_AMOUNT_RATIO%2CTURNOVERRATE%2CFREE_MARKET_CAP%2CEXPLANATION%2CD1_CLOSE_ADJCHRATE%2CD2_CLOSE_ADJCHRATE%2CD5_CLOSE_ADJCHRATE%2CD10_CLOSE_ADJCHRATE%2CSECURITY_TYPE_CODE&source=WEB&client=WEB&filter=(TRADE_DATE%3C%3D%27{}%27)(TRADE_DATE%3E%3D%27{}%27)'.format(i,end_date,start_date)
+            dd=requests.get(url,headers=self.headers)
+            df=pd.DataFrame(dd.json()['result']['data'])
+            self.stock_data=pd.concat([self.stock_data,df])
+        if nums==1:
+            self.stock_data=self.stock_data[['SECURITY_CODE','SECURITY_NAME_ABBR','EXPLAIN','CLOSE_PRICE','CHANGE_RATE',\
+                  'BILLBOARD_NET_AMT','BILLBOARD_BUY_AMT','BILLBOARD_SELL_AMT',\
+                  'BILLBOARD_DEAL_AMT','ACCUM_AMOUNT', 'DEAL_NET_RATIO', \
+                  'DEAL_AMOUNT_RATIO', 'TURNOVERRATE', 'FREE_MARKET_CAP', 'EXPLANATION']]
+            self.stock_data.columns=['代码','名称','解读','收盘价','涨跌幅','净买额(万)','买入额(万',\
+                      '卖出额(万)','成交额(万)','总成交额(万)','净买额占总比',\
+                      '成交额占总比','换手率','流通市值(亿)','上榜原因']
+        else:
+            self.stock_data=self.stock_data[['SECURITY_CODE','SECURITY_NAME_ABBR','EXPLAIN','TRADE_DATE','CLOSE_PRICE','CHANGE_RATE',\
+                  'BILLBOARD_NET_AMT','BILLBOARD_BUY_AMT','BILLBOARD_SELL_AMT',\
+                  'BILLBOARD_DEAL_AMT','ACCUM_AMOUNT', 'DEAL_NET_RATIO', \
+                  'DEAL_AMOUNT_RATIO', 'TURNOVERRATE', 'FREE_MARKET_CAP', 'EXPLANATION']]
+            self.stock_data.columns=['代码','名称','解读','上榜日','收盘价','涨跌幅','净买额(万)','买入额(万',\
+                      '卖出额(万)','成交额(万)','总成交额(万)','净买额占总比',\
+                      '成交额占总比','换手率','流通市值(亿)','上榜原因']
+        self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
+        self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
+
     def get_main_business_com(self,code):
         self.stock_data1 = getEastData.stock_zygc_ym(code)
         #self.stock_data1.drop(self.stock_data1.columns[[0]],axis=1,inplace=True)
@@ -300,8 +465,8 @@ class TableStock(QTableView):
     def get_main_indicator(self,code):
         url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code={}'.format(code)
         headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        df=requests.get(url,headers=headers).content.decode()
-        data=DataFrame(json.loads(df)['data'])
+        df=requests.get(url,headers=headers)
+        data=DataFrame(df.json()['data'])
         data=data.T
         data.rename(index={'EPSJB':'基本每股收益(元)','EPSKCJB':'扣非每股收益(元)','EPSXS':'稀释每股收益(元)',\
         'BPS':'每股净资产(元)','MGZBGJ':'每股公积金(元)','MGWFPLR':'每股未分配利润(元)','MGJYXJJE':'每股经营现金流(元)',\
@@ -328,10 +493,10 @@ class TableStock(QTableView):
         url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/zcfzbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period1,code)
         url1='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/zcfzbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period2,code)
         headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        df=requests.get(url,headers=headers).content.decode()
-        df1=requests.get(url1,headers=headers).content.decode()
-        data=DataFrame(json.loads(df)['data'])
-        data1=DataFrame(json.loads(df1)['data'])
+        df=requests.get(url,headers=headers)
+        df1=requests.get(url1,headers=headers)
+        data=DataFrame(df.json()['data'])
+        data1=DataFrame(df1.json()['data'])
         data=pd.concat([data,data1],ignore_index=True)
         data=data.T
         data.rename(index={'MONETARYFUNDS':'货币资金','LEND_FUND':'拆出资金','NOTE_ACCOUNTS_RECE':'应收票据及应收账款','ACCOUNTS_RECE':'应收账款',\
@@ -365,10 +530,10 @@ class TableStock(QTableView):
         url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/lrbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period1,code)
         url1='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/lrbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period2,code)
         headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        df=requests.get(url,headers=headers).content.decode()
-        df1=requests.get(url1,headers=headers).content.decode()
-        data=DataFrame(json.loads(df)['data'])
-        data1=DataFrame(json.loads(df1)['data'])
+        df=requests.get(url,headers=headers)
+        df1=requests.get(url1,headers=headers)
+        data=DataFrame(df.json()['data'])
+        data1=DataFrame(df1.json()['data'])
         data=pd.concat([data,data1],ignore_index=True)
         data=data.T
         data.rename(index={'TOTAL_OPERATE_INCOME':'营业总收入','OPERATE_INCOME':'营业收入','FEE_COMMISSION_INCOME':'其中:手续费及佣金收入',\
@@ -414,10 +579,10 @@ class TableStock(QTableView):
         url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/xjllbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period1,code)
         url1='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/xjllbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period2,code)
         headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        df=requests.get(url,headers=headers).content.decode()
-        df1=requests.get(url1,headers=headers).content.decode()
-        data=DataFrame(json.loads(df)['data'])
-        data1=DataFrame(json.loads(df1)['data'])
+        df=requests.get(url,headers=headers)
+        df1=requests.get(url1,headers=headers)
+        data=DataFrame(df.json()['data'])
+        data1=DataFrame(df1.json()['data'])
         data=pd.concat([data,data1],ignore_index=True)
         data=data.T
         data.rename(index={'SALES_SERVICES':'销售商品、提供劳务收到的现金','DEPOSIT_INTERBANK_ADD':'客户存款和同业存放款项净增加额',\
@@ -456,22 +621,6 @@ class TableStock(QTableView):
         self.stock_data1 = data.reset_index(drop=True)
         self.model2=modelAnalysisTable.AnalysisTable(self.stock_data1)
 
-    def get_time_share_tick(self,num,code):
-        import urllib.request
-        url='http://16.push2.eastmoney.com/api/qt/stock/details/sse?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54,f55&mpi=2000&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&pos=-0&secid={num}.{code}'.format(num=num,code=code)
-        myURL=urllib.request.urlopen(url=url)
-        data=myURL.readline().decode().lstrip('data:')
-        df=pd.DataFrame(eval(data)['data'])
-        df=df['details'].str.split(',',expand=True)
-        for i in range(len(df)):
-            if df[4][i]=='1':
-                df[4][i]='B'
-            elif df[4][i]=='2':
-                df[4][i]='S'
-        self.time_share=df.rename(columns={0:'time',1:'price',2:'trade',3:'vol',4:'direction'})
-
-        self.model3=modelTimeShare.TimeShare(self.time_share)
-
     def init_ui(self):
         self.stock_data.sort_values(by=self.stock_data.columns[self.pre_index] , ascending=not self.sort_bool[self.pre_index],kind="mergesort",inplace=True)
         self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
@@ -484,16 +633,6 @@ class TableStock(QTableView):
     def reflash_my_stock(self):
         self.model_my_stock=modelTableStock.ModelTableStock(self.my_stock_data)
         self.view_my_stock.setModel(self.model_my_stock)
-
-    def reflashView3(self):
-        self.view3.horizontalHeader().hide()
-        self.view3.verticalHeader().hide()
-        self.view3.setColumnWidth(0,70)
-        self.view3.setColumnWidth(1,70)
-        self.view3.setColumnWidth(2,10)
-        self.view3.setColumnWidth(3,10)
-        self.view3.setColumnWidth(4,10)
-        self.view3.setModel(self.model3)
 
     def reflashView2(self):
         self.view2.setModel(self.model2)
@@ -609,6 +748,45 @@ class TableStock(QTableView):
                 self.view.setColumnWidth(15,70)
                 self.view.setColumnWidth(16,70)
             else:
+                if globalVariable.subCount==6:
+                    self.view.setColumnWidth(0,120)
+                    self.view.setColumnWidth(1,100)
+                    self.view.setColumnWidth(2,100)
+                    self.view.setColumnWidth(3,140)
+                    self.view.setColumnWidth(4,100)
+                    return
+                #营业部
+                elif globalVariable.subCount==7:
+                    self.view.setColumnWidth(0,260)
+                    for i in range(1,17):
+                        self.view.setColumnWidth(i,80)
+                    return
+                #基金
+                elif globalVariable.subCount==8:
+                    self.view.setColumnWidth(0,100)
+                    self.view.setColumnWidth(1,230)
+                    self.view.setColumnWidth(2,100)
+                    self.view.setColumnWidth(3,80)
+                    self.view.setColumnWidth(4,80)
+                    self.view.setColumnWidth(5,80)
+                    for i in range(6,17):
+                        self.view.setColumnWidth(i,70)
+                    return
+                #龙虎榜
+                elif globalVariable.subCount==9:
+                    self.view.setColumnWidth(0,70)
+                    self.view.setColumnWidth(1,70)
+                    self.view.setColumnWidth(2,270)
+                    self.view.setColumnWidth(3,110)
+                    self.view.setColumnWidth(4,70)
+                    for i in range(5,10):
+                        self.view.setColumnWidth(i,100)
+                    self.view.setColumnWidth(10,110)
+                    self.view.setColumnWidth(11,110)
+                    self.view.setColumnWidth(12,70)
+                    self.view.setColumnWidth(13,100)
+                    self.view.setColumnWidth(14,200)
+                    return
                 self.view.setColumnWidth(0,120)
                 self.view.setColumnWidth(1,100)
                 self.view.setColumnWidth(2,100)

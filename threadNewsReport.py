@@ -9,7 +9,6 @@ import pyttsx3
 #from PySide6.QtGui import QColor,QTextCursor
 #import akshare as ak
 import json
-import re
 import requests
 import datetime,time
 
@@ -19,8 +18,8 @@ class NewsReport(QThread):
     def __init__(self,parent):
         super(NewsReport, self).__init__()
         self.parent=parent
-        self.recent_leng=0
-        self.recent_time=str(datetime.datetime.now()+datetime.timedelta(minutes=-3))[0:19]
+        recent_time=datetime.datetime.now()+datetime.timedelta(minutes=-3)
+        self.id=datetime.datetime.strftime(recent_time,"%Y%m%d%H%M%S000000")
         self.headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
         self.url='https://www.jin10.com/flash_newest.js?t=1667528593473'
 #        self.file = QUrl.fromLocalFile('e:/cjh/Documents/pyqt/baoStock/key.wav') # 音频文件路径
@@ -36,39 +35,36 @@ class NewsReport(QThread):
             if voice.name[0:16]=='Microsoft Huihui':
                 self.engine.setProperty('voice',voice.id)       #设置语音合成器
                 break
-        self.engine.setProperty('rate', 190)   #设置语速
-        self.engine.setProperty('volume',0.5)  #设置音量
+        self.engine.setProperty('rate', 200)   #设置语速
+        self.engine.setProperty('volume',0.8)  #设置音量
 
     def __del__(self):
         self.wait()
 
     def get_news_data(self):
         data=requests.get(url=self.url,headers=self.headers).text
-        self.js_news_df=json.loads(re.findall('\[{.*}\]', data)[0])
+        self.js_news_df=json.loads(data[data.find('[{'):-1])
 
     def deal_news_data(self):
         self.get_news_data()
         #self.js_news_df = ak.js_news(timestamp=datetime.datetime.now())
         #cur_time=str(datetime.datetime.now())[11:16]
         for i in [10,9,8,7,6,5,4,3,2,1,0]:
-            t = self.js_news_df[i]['time'][0:19]
-            utc_date2=datetime.datetime.strptime(t,"%Y-%m-%dT%H:%M:%S")
-            local_date=utc_date2+datetime.timedelta(hours=8)
-            local_date=datetime.datetime.strftime(local_date,"%Y-%m-%d %H:%M:%S")
-            if local_date<self.recent_time:
+            id=self.js_news_df[i]['id']
+            if id<=self.id:
                 continue
             if 'content' in self.js_news_df[i]['data']:
                 news_data=self.js_news_df[i]['data']['content']
             else:
                 continue
-            l=len(news_data)
             if news_data[1:5]=='金十图示' or news_data=='' or news_data[0:2]=='<a' or news_data=='-' or \
                  news_data[1:5]=='金十出品':
                 continue
-            if local_date==self.recent_time and l==self.recent_leng:
-                continue
-            self.recent_leng=l
-            self.recent_time=local_date
+            t = self.js_news_df[i]['time'][0:19]
+            utc_date2=datetime.datetime.strptime(t,"%Y-%m-%dT%H:%M:%S")
+            local_date=utc_date2+datetime.timedelta(hours=8)
+            local_date=datetime.datetime.strftime(local_date,"%Y-%m-%d %H:%M:%S")
+            self.id=id
             self.parent.text1=local_date
             self.parent.text=news_data
             self._signal.emit()
