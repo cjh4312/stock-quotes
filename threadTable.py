@@ -81,7 +81,9 @@ class TableThread(QThread):
             elif globalVariable.subCount==5:
                 self.parent.tableView.get_high_low_statistics()
             elif globalVariable.subCount==6:
-                self.parent.tableView.north_plate_flows(self.parent.north_box.currentText())
+                days={'今日':'1','3日':'3','5日':'5','10日':'10','月':'M','季':'Q','年':'Y'}
+                #self.parent.tableView.north_plate_flows(self.parent.north_box.currentText())
+                self.parent.tableView.north_plate_flows1(days[self.parent.north_box.currentText()])
             elif globalVariable.subCount==7:
                 self.parent.tableView.business_department_rank(self.parent.business_department_text.currentIndex()+1)
             elif globalVariable.subCount==8:

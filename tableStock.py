@@ -257,16 +257,17 @@ class TableStock(QTableView):
         self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
         self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
 
-#    def north_plate_flows(self):
-#        url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=ADD_MARKET_CAP&sortTypes=-1&pageSize=2000&pageNumber=1&reportName=RPT_MUTUAL_STOCK_NORTHSTA&columns=ALL&source=WEB&client=WEB&filter=(TRADE_DATE%3D%272022-12-16%27)(INTERVAL_TYPE%3D%221%22)'
-#        dd=requests.get(url,headers=self.headers)
-#        df=pd.DataFrame(dd.json()['result']['data'])
-#        self.stock_data=df[['SECURITY_CODE','SECURITY_NAME','CLOSE_PRICE','CHANGE_RATE','HOLD_SHARES',\
-#              'HOLD_MARKET_CAP','FREE_SHARES_RATIO','TOTAL_SHARES_RATIO',\
-#              'ADD_SHARES_REPAIR','ADD_MARKET_CAP','ADD_SHARES_AMP',\
-#              'FREECAP_RATIO_CHG','TOTAL_RATIO_CHG','AREA_NAME']]
-#        self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
-#        self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
+    def north_plate_flows1(self,days):
+        url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=ADD_MARKET_CAP&sortTypes=-1&pageSize=5000&pageNumber=1&reportName=RPT_MUTUAL_STOCK_NORTHSTA&columns=ALL&source=WEB&client=WEB&filter=(TRADE_DATE%3D%272022-12-22%27)(INTERVAL_TYPE%3D%22{}%22)'.format(days)
+        dd=requests.get(url,headers=self.headers)
+        df=pd.DataFrame(dd.json()['result']['data'])
+        self.stock_data=df[['SECURITY_CODE','SECURITY_NAME','CLOSE_PRICE','CHANGE_RATE','HOLD_SHARES',\
+              'HOLD_MARKET_CAP','FREE_SHARES_RATIO','TOTAL_SHARES_RATIO',\
+              'ADD_SHARES_REPAIR','ADD_MARKET_CAP','ADD_SHARES_AMP',\
+              'FREECAP_RATIO_CHG','TOTAL_RATIO_CHG','AREA_NAME']]
+        self.stock_data.columns=['代码','名称','收盘价','涨跌幅','持股数','持市值','占流通股比','占总股本比','增股数','增市值','增市值增幅','占流通股比','占总股本比','所属板块']
+        self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
+        self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
 
     def north_plate_flows(self,days):
         url='https://legulegu.com/stockdata/hk-hold-sort'

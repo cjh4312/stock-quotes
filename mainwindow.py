@@ -1195,12 +1195,15 @@ class MainWindow(QMainWindow):
 
     def create_rightmenu1(self,param):
         #菜单对象
-
+        if param==2:
+            row_index = self.tableView.view_rising_speed.currentIndex().row()
+        else:
+            row_index = self.tableView.view.currentIndex().row()
         self.stock_menu = QMenu(self)
         self.actionA = QAction(u'加入自选',self)#创建菜单选项对象
         self.stock_menu.addAction(self.actionA)#把动作A选项对象添加到菜单self.groupBox_menu上
         self.stock_menu.popup(QCursor.pos())#声明当鼠标在groupBox控件上右击时，在鼠标位置显示右键菜单 ,exec_,popup两个都可以
-        self.actionA.triggered.connect(lambda:self.add_my_stock(param)) #将动作A触发时连接到槽函数
+        self.actionA.triggered.connect(lambda:self.add_my_stock(param,row_index)) #将动作A触发时连接到槽函数
 
     def create_rightmenu2(self):
         #菜单对象
@@ -1211,7 +1214,7 @@ class MainWindow(QMainWindow):
         self.stock_menu.popup(QCursor.pos())#声明当鼠标在groupBox控件上右击时，在鼠标位置显示右键菜单 ,exec_,popup两个都可以，
         self.actionB.triggered.connect(self.del_my_stock)
 
-    def add_my_stock(self,param):
+    def add_my_stock(self,param,row_index):
         if param==3:
             for i in range(1,len(self.tableView.stock_data_copy)+1):
                 if self.stock_code==self.tableView.stock_data_copy.loc[i,'代码']:
@@ -1222,7 +1225,7 @@ class MainWindow(QMainWindow):
                     return
             self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.stock_data_copy.loc[self.select_item+1]
         elif param==1:
-            row_index = self.tableView.view.currentIndex().row()
+            #row_index = self.tableView.view.currentIndex().row()
             for i in range(1,len(self.tableView.my_stock_data)+1):
                 if self.tableView.my_stock_data.loc[i,'代码']==self.tableView.stock_data.loc[row_index+1,'代码']:
                     return

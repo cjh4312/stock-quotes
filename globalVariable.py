@@ -68,11 +68,11 @@ def isWeekend():
 def isHKMarketDay():
     tz = pytz.timezone('Asia/Hong_Kong')
     date_zh = datetime.datetime.now(tz)
-    Vacation=settings.value("General/Vacation_HK")
+    Vacation=eval(settings.value("General/Vacation_HK"))
     localdate=int(date_zh.strftime('%m%d'))
     localweek=int(date_zh.strftime('%w'))
     localtime=int(date_zh.strftime("%H%M%S"))
-    if localdate not in Vacation and localweek in [1,2,3,4,5] and ((localtime>=91500 and localtime<=121505) or (localtime>=130000 and localtime<=161505)):
+    if localdate not in Vacation and localweek in [1,2,3,4,5] and ((localtime>=90000 and localtime<=121505) or (localtime>=130000 and localtime<=161505)):
         return True
     else:
         return False

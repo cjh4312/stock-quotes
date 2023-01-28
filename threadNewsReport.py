@@ -35,7 +35,7 @@ class NewsReport(QThread):
             if voice.name[0:16]=='Microsoft Huihui':
                 self.engine.setProperty('voice',voice.id)       #设置语音合成器
                 break
-        self.engine.setProperty('rate', 200)   #设置语速
+        self.engine.setProperty('rate', 180)   #设置语速
         self.engine.setProperty('volume',0.8)  #设置音量
 
     def __del__(self):
@@ -72,11 +72,11 @@ class NewsReport(QThread):
             self.text=news_data
             #self.player.play()
             if self.parent.isOpenNewsReport:
-                self.parent.isNewsReportStop=False
                 self.engine.say(self.text)
                 self.engine.runAndWait()
                 self.engine.stop()
-                self.parent.isNewsReportStop=True
 
     def run(self):
+        self.parent.isNewsReportStop=False
         self.deal_news_data()
+        self.parent.isNewsReportStop=True

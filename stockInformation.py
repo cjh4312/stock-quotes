@@ -6,7 +6,6 @@
 import pandas as pd
 from xpinyin import Pinyin
 import requests
-from pandas.core.frame import DataFrame
 
 def download():
     deal_with_index_list()
@@ -65,7 +64,7 @@ def deal_with_concept_industry():
     data1.rename(columns={'板块名称':'name','板块代码':'symbol'},inplace=True)
     url='http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=40&po=0&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&wbp2u=|0|0|0|web&fid=f3&fs=m:90+t:1+f:!50&fields=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f26,f22,f33,f11,f62,f128,f136,f115,f152,f124,f107,f104,f105,f140,f141,f207,f208,f209,f222&_=1665566741514'
     headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-    data2=DataFrame(requests.get(url,headers=headers).json()['data']['diff'])[['f12','f14']]
+    data2=pd.DataFrame(requests.get(url,headers=headers).json()['data']['diff'])[['f12','f14']]
     data2.rename(columns={'f12':'symbol','f14':'name'},inplace=True)
     data=pd.concat([data,data1,data2])
     data.index = pd.RangeIndex(start=0, stop=len(data), step=1)

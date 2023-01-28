@@ -120,7 +120,6 @@ class RealTimeThread(QThread):
                     self.parent.price_len[j]=len(ok[1])
                     self.parent.flag_direction[j]=int(ok[4])
                     self.parent.now_close=float(ok[1])
-
         j=0
         #print(self.parent.time_share_data)
         for i in range(len(self.parent.time_share_data)):
