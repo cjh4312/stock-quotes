@@ -206,7 +206,7 @@ class MainWindow(QMainWindow):
         self.dateEdit = QDateTimeEdit(self.curRecentMarketDay())
         self.northPlateFlows=QPushButton('北向资金买入')
         self.north_box=QComboBox()
-        information=['1日','3日']
+        information=['今日','3日','5日','10日','月','季','年']
         self.north_box.addItems(information)
         self.tradedetail=QPushButton('龙虎榜详情')
         self.tradedetail_text=QComboBox()
@@ -326,6 +326,7 @@ class MainWindow(QMainWindow):
         self.tableView.view_my_stock.doubleClicked.connect(self.double_clicked_my_stock_info)
         self.tableView.view2.doubleClicked.connect(self.double_clicked_stock_info2)
         self.tableView.view.clicked.connect(self.clicked_stock_item)
+
         self.tableView.view_rising_speed.clicked.connect(self.clicked_rising_speed_item)
         self.tableView.view_my_stock.clicked.connect(self.clicked_my_stock_item)
         self.tableView.view.horizontalHeader().sectionClicked.connect(self.horizontalHeader)
@@ -733,7 +734,7 @@ class MainWindow(QMainWindow):
     ##另类的翻页功能，滚动条改变之前的数值
     def beforePageChanged(self):
         if self.isVerticalScrollBar==True:
-            self.preVerticalScrollBar=self.tableView.view.verticalScrollBar().value()
+            self.preVerticalScrollBar=self.tableView.verticalScrollBar().value()
     #滚动条改变之后的数值，根据差值设置翻页，设置当前选择项
     def afterPageChanged(self):
         if self.isVerticalScrollBar==True and globalVariable.getValue()!=3:
@@ -1194,6 +1195,7 @@ class MainWindow(QMainWindow):
 
     def create_rightmenu1(self,param):
         #菜单对象
+
         self.stock_menu = QMenu(self)
         self.actionA = QAction(u'加入自选',self)#创建菜单选项对象
         self.stock_menu.addAction(self.actionA)#把动作A选项对象添加到菜单self.groupBox_menu上
@@ -1220,13 +1222,14 @@ class MainWindow(QMainWindow):
                     return
             self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.stock_data_copy.loc[self.select_item+1]
         elif param==1:
+            row_index = self.tableView.view.currentIndex().row()
             for i in range(1,len(self.tableView.my_stock_data)+1):
-                if self.tableView.my_stock_data.loc[i,'代码']==self.stock_code:
+                if self.tableView.my_stock_data.loc[i,'代码']==self.tableView.stock_data.loc[row_index+1,'代码']:
                     return
             if globalVariable.getValue()==4:
                 w=0
                 for i in range(1,len(self.tableView.stock_data_copy)+1):
-                    if self.stock_code==self.tableView.stock_data_copy.loc[i,'代码']:
+                    if self.tableView.stock_data.loc[row_index+1,'代码']==self.tableView.stock_data_copy.loc[i,'代码']:
                         self.select_item=i-1
                         w=1
                         break
@@ -1234,19 +1237,21 @@ class MainWindow(QMainWindow):
                     return
                 self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.stock_data_copy.loc[self.select_item+1]
             else:
-                self.select_item=self.cur_item
+                self.select_item=row_index
                 self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.stock_data.loc[self.select_item+1]
         elif param==2:
+            row_index = self.tableView.view_rising_speed.currentIndex().row()
             for i in range(1,len(self.tableView.my_stock_data)+1):
-                if self.tableView.my_stock_data.loc[i,'代码']==self.stock_code:
+                if self.tableView.my_stock_data.loc[i,'代码']==self.tableView.rising_speed_data.loc[row_index+1,'代码']:
                     return
-            self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.rising_speed_data.loc[self.rising_speed+1]
+            self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.rising_speed_data.loc[row_index+1]
         self.tableView.my_stock_data.index = pd.RangeIndex(start=1, stop=len(self.tableView.my_stock_data)+1, step=1)
         self.tableView.reflash_my_stock()
         self.tableView.my_stock_data.to_csv('list/my_stock.csv',encoding='gbk')
 
     def del_my_stock(self):
-        self.tableView.my_stock_data.drop(self.tableView.my_stock_data.index[[self.my_cur_item]],inplace=True)
+        row_index = self.tableView.view_my_stock.currentIndex().row()
+        self.tableView.my_stock_data.drop(self.tableView.my_stock_data.index[[row_index]],inplace=True)
         self.tableView.my_stock_data.index = pd.RangeIndex(start=1, stop=len(self.tableView.my_stock_data)+1, step=1)
         self.tableView.reflash_my_stock()
         self.tableView.my_stock_data.to_csv('list/my_stock.csv',encoding='gbk')
