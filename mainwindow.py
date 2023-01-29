@@ -4,7 +4,8 @@ import pandas as pd
 #import figureCanvas
 import worldIndex,drawTimeShare,drawCandle,globalVariable,getDate,tableStock,baseInformation
 import threadRealTime,threadDealTimeShare,threadNewsReport,threadGetCandle,threadTable,threadIndex
-from PySide6.QtWidgets import QRadioButton,QMenu,QTextEdit,QApplication,QDateTimeEdit,QMainWindow,QMessageBox,QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLineEdit,QComboBox
+from PySide6.QtWidgets import (QRadioButton,QMenu,QTextEdit,QApplication,QDateTimeEdit,QMainWindow,
+                    QMessageBox,QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLineEdit,QComboBox)
 from PySide6.QtGui import QColor,QTextCharFormat,QTextCursor,QFont,QIcon,QAction,QCursor
 from PySide6.QtCore import QThread,Qt,QTimer,QDateTime,QTime
 
@@ -597,23 +598,23 @@ class MainWindow(QMainWindow):
         #self.tableView.setViewWidth()
         self.main2.hide()
         self.right_widget.hide()
-        globalVariable.marketNum=3
+        #globalVariable.marketNum=3
         globalVariable.isBoardWidth=False
         self.dateEdit.setCurrentSection(QDateTimeEdit.DaySection)
         if self.sender()==self.ui.financial_flows:
-            globalVariable.subCount=4
+            globalVariable.subCount=4#东方财富板块
             self.isBoard=True
             self.table_thread.start()
         elif self.sender()==self.royalFlushPlateFlows:
-            globalVariable.subCount=1
+            globalVariable.subCount=1#同花顺板块
             self.isBoard=True
             self.table_thread.start()
         elif self.sender()==self.stockHotRank:
-            globalVariable.subCount=2
+            globalVariable.subCount=2#股票热度淘股吧
             self.isBoard=False
             self.table_thread.start()
         elif self.sender()==self.yesterdayStrong:
-            globalVariable.subCount=3
+            globalVariable.subCount=3#强势板块
             self.isBoard=False
             self.table_thread.start()
         elif self.sender()==self.eastPlateFlows:
@@ -621,23 +622,23 @@ class MainWindow(QMainWindow):
             self.isBoard=True
             self.table_thread.start()
         elif self.sender()==self.newHigh_newLow:
-            globalVariable.subCount=5
+            globalVariable.subCount=5#新高新低
             self.isBoard=True
             self.table_thread.start()
         elif self.sender()==self.northPlateFlows:
-            globalVariable.subCount=6
+            globalVariable.subCount=6#北向资金买入
             self.isBoard=False
             self.table_thread.start()
         elif self.sender()==self.business_department:
-            globalVariable.subCount=7
+            globalVariable.subCount=7#营业部排行
             self.isBoard=False
             self.table_thread.start()
         elif self.sender()==self.open_fund:
-            globalVariable.subCount=8
+            globalVariable.subCount=8#开放基金排行
             self.isBoard=False
             self.table_thread.start()
         elif self.sender()==self.tradedetail:
-            globalVariable.subCount=9
+            globalVariable.subCount=9#龙虎榜详情
             self.isBoard=False
             self.table_thread.start()
         if globalVariable.marketNum==1:
@@ -649,7 +650,6 @@ class MainWindow(QMainWindow):
         elif globalVariable.marketNum==5:
             globalVariable.marketNum=6
             self.table_thread2.start()
-
         #self.stockAnalysis.view.show()
         self.right_widget_four.show()
 
@@ -680,7 +680,8 @@ class MainWindow(QMainWindow):
             self.tableView.view_rising_speed.setCurrentIndex(self.tableView.model_rising_speed.index(self.rising_speed,0))
             self.tableView.view_my_stock.setCurrentIndex(self.tableView.model_my_stock.index(self.my_cur_item,0))
             if self.isclicked:
-                self.clicked_stock_item(self.item)
+                row_index = self.tableView.view.currentIndex()
+                self.clicked_stock_item(row_index)
                 self.isclicked=False
 
     #3大股市开市时间每5秒刷新一次数据
@@ -734,17 +735,17 @@ class MainWindow(QMainWindow):
     ##另类的翻页功能，滚动条改变之前的数值
     def beforePageChanged(self):
         if self.isVerticalScrollBar==True:
-            self.preVerticalScrollBar=self.tableView.verticalScrollBar().value()
+            self.preVerticalScrollBar=self.tableView.view.verticalScrollBar().value()
     #滚动条改变之后的数值，根据差值设置翻页，设置当前选择项
     def afterPageChanged(self):
         if self.isVerticalScrollBar==True and globalVariable.getValue()!=3:
             self.backVerticalScrollBar=self.tableView.view.verticalScrollBar().value()
+            #print(self.preVerticalScrollBar,self.backVerticalScrollBar)
             if self.backVerticalScrollBar>self.preVerticalScrollBar:
                 self.pageDownNum+=1
             elif self.backVerticalScrollBar<self.preVerticalScrollBar:
                 self.pageDownNum-=1
             self.isVerticalScrollBar=False
-        #print(self.pageDownNum,self.preVerticalScrollBar,self.backVerticalScrollBar)
             self.tableView.view.verticalScrollBar().setValue(self.pageDownNum*(self.tableView.view.verticalScrollBar().pageStep()-1))
             self.cur_item=self.cur_item%(self.tableView.view.verticalScrollBar().pageStep()-1)+self.pageDownNum*(self.tableView.view.verticalScrollBar().pageStep()-1)
             self.tableView.view.setCurrentIndex(self.tableView.model.index(self.cur_item,0))
@@ -1195,15 +1196,16 @@ class MainWindow(QMainWindow):
 
     def create_rightmenu1(self,param):
         #菜单对象
-        if param==2:
-            row_index = self.tableView.view_rising_speed.currentIndex().row()
-        else:
-            row_index = self.tableView.view.currentIndex().row()
-        self.stock_menu = QMenu(self)
-        self.actionA = QAction(u'加入自选',self)#创建菜单选项对象
-        self.stock_menu.addAction(self.actionA)#把动作A选项对象添加到菜单self.groupBox_menu上
-        self.stock_menu.popup(QCursor.pos())#声明当鼠标在groupBox控件上右击时，在鼠标位置显示右键菜单 ,exec_,popup两个都可以
-        self.actionA.triggered.connect(lambda:self.add_my_stock(param,row_index)) #将动作A触发时连接到槽函数
+        if globalVariable.getValue()!=2 and globalVariable.getValue()!=5:
+            if param==2:
+                row_index = self.tableView.view_rising_speed.currentIndex().row()
+            else:
+                row_index = self.tableView.view.currentIndex().row()
+            self.stock_menu = QMenu(self)
+            self.actionA = QAction(u'加入自选',self)#创建菜单选项对象
+            self.stock_menu.addAction(self.actionA)#把动作A选项对象添加到菜单self.groupBox_menu上
+            self.stock_menu.popup(QCursor.pos())#声明当鼠标在groupBox控件上右击时，在鼠标位置显示右键菜单 ,exec_,popup两个都可以
+            self.actionA.triggered.connect(lambda:self.add_my_stock(param,row_index)) #将动作A触发时连接到槽函数
 
     def create_rightmenu2(self):
         #菜单对象
