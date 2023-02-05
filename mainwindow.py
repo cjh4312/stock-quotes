@@ -7,7 +7,7 @@ import threadRealTime,threadDealTimeShare,threadNewsReport,threadGetCandle,threa
 from PySide6.QtWidgets import (QRadioButton,QMenu,QTextEdit,QApplication,QDateTimeEdit,QMainWindow,
                     QMessageBox,QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLineEdit,QComboBox)
 from PySide6.QtGui import QColor,QTextCharFormat,QTextCursor,QFont,QIcon,QAction,QCursor
-from PySide6.QtCore import QThread,Qt,QTimer,QDateTime,QTime
+from PySide6.QtCore import QThread,Qt,QTimer,QTime
 
 # Important:
 # You need to run the following command to generate the ui_form.py file
@@ -16,7 +16,6 @@ from PySide6.QtCore import QThread,Qt,QTimer,QDateTime,QTime
 from ui_form import Ui_MainWindow
 
 class MainWindow(QMainWindow):
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_MainWindow()
@@ -90,7 +89,7 @@ class MainWindow(QMainWindow):
         self.tableView.view.setFocusPolicy(Qt.NoFocus)
         self.tableView.view_rising_speed.setFocusPolicy(Qt.NoFocus)
         self.tableView.view_my_stock.setFocusPolicy(Qt.NoFocus)
-        self.baseInformation=baseInformation.BaseInformation(self.stock_code,self.name,self.ui.statusbar)
+        self.baseInformation=baseInformation.BaseInformation(self)
 
     def main_layout_init(self):
         main_layout=QHBoxLayout()
@@ -204,14 +203,14 @@ class MainWindow(QMainWindow):
         self.newHigh_newLow=QPushButton('新高新低数量')
         self.stockHotRank=QPushButton('股票热度、淘股吧')
         self.yesterdayStrong=QPushButton('昨日强势股票')
-        self.dateEdit = QDateTimeEdit(self.curRecentMarketDay())
+        self.dateEdit = QDateTimeEdit(globalVariable.time_to_QDateTime(globalVariable.curRecentMarketDay().date()))
         self.northPlateFlows=QPushButton('北向资金买入')
         self.north_box=QComboBox()
         information=['今日','3日','5日','10日','月','季','年']
         self.north_box.addItems(information)
         self.tradedetail=QPushButton('龙虎榜详情')
         self.tradedetail_text=QComboBox()
-        information=[globalVariable.curRecentMarketDay(),'近3日','近5日','近10日','近30日']
+        information=[str(globalVariable.curRecentMarketDay().date()),'近3日','近5日','近10日','近30日']
         self.tradedetail_text.addItems(information)
         self.business_department=QPushButton('营业部排行')
         self.business_department_text=QComboBox()
@@ -325,6 +324,7 @@ class MainWindow(QMainWindow):
         self.tableView.view.doubleClicked.connect(self.double_clicked_stock_info)
         self.tableView.view_rising_speed.doubleClicked.connect(self.double_clicked_rising_speed_info)
         self.tableView.view_my_stock.doubleClicked.connect(self.double_clicked_my_stock_info)
+
         self.tableView.view2.doubleClicked.connect(self.double_clicked_stock_info2)
         self.tableView.view.clicked.connect(self.clicked_stock_item)
 
@@ -428,6 +428,7 @@ class MainWindow(QMainWindow):
             if self.whichDay<5:
                 self.draw_time_share_thread4.start()
 
+    #更新新闻
     def flash_news_report(self):
         self.fmt.setForeground(QColor("red"))
         self.news_data.mergeCurrentCharFormat(self.fmt)
@@ -436,7 +437,7 @@ class MainWindow(QMainWindow):
         self.news_data.mergeCurrentCharFormat(self.fmt)
         self.news_data.append(self.text)
         self.news_data.moveCursor(QTextCursor.End)
-
+    #刷新分笔成交
     def flash_time_share_tick_data(self):
         #self.baseInformation.flash_time_share_tick_data(self.price,self.pre_close,self.line_len,self.price_len,self.flag_direction,self.flag_pos,self.time_share_data)
 
@@ -472,7 +473,7 @@ class MainWindow(QMainWindow):
                 cursor.setPosition(self.flag_pos[i+1],QTextCursor.MoveAnchor);
                 cursor.setPosition(self.flag_pos[i+1]-1,QTextCursor.KeepAnchor);
                 cursor.mergeCharFormat(fmt)
-
+    #刷新分时图
     def draw_time_share_chart(self):
         if len(self.time_share_chart_data)==0:
             return
@@ -686,29 +687,32 @@ class MainWindow(QMainWindow):
 
     #3大股市开市时间每5秒刷新一次数据
     def flashTableData(self):
+        #判断5秒
         a=self.time_count%10
+        #中国市场
         if globalVariable.marketNum==1:
-            if globalVariable.isZhMarketDay():
+            if globalVariable.isZhMarketDay():#交易日，非指数
                 if self.stock_code[0:4]!='100.' or self.stock_code[0:4]!='103.' or self.stock_code[0:4]!='104.':
-                    if self.time_count%2==1:
+                    if self.time_count%2==1:#1秒刷新买卖盘,分笔成交
                         self.real_time_thread3.start()
-                    if a==0:
+                    if a==0:#5秒刷新分时图，显示交易中
                         self.draw_time_share_thread4.start()
                         self.baseInformation.circle.setStyleSheet(globalVariable.circle_green_SheetStyle)
-            else:
+            else:#非交易日，非周末，更新指数、板块和个股数据每天9点后
                 if a==0:
                     self.baseInformation.circle.setStyleSheet(globalVariable.circle_red_SheetStyle)
                     t=str(datetime.datetime.now())
                     if not globalVariable.isWeekend() and t[0:10]>str(self.downloadInfoTime) and\
                                     t[11:16]>'09:00' and not self.downloadInfoStart:
                         self.downloadStart()
-
+        #港股分时图刷新
         elif globalVariable.marketNum==5 and a==0:
             if globalVariable.isHKMarketDay():
                 self.draw_time_share_thread4.start()
                 self.baseInformation.circle.setStyleSheet(globalVariable.circle_green_SheetStyle)
             else:
                 self.baseInformation.circle.setStyleSheet(globalVariable.circle_red_SheetStyle)
+        #美股刷新分笔成交和分时图
         elif globalVariable.marketNum==2 and a==0:
             if globalVariable.isUSMarketDay():
                 self.draw_time_share_thread4.start()
@@ -716,19 +720,24 @@ class MainWindow(QMainWindow):
                 self.baseInformation.circle.setStyleSheet(globalVariable.circle_green_SheetStyle)
             else:
                 self.baseInformation.circle.setStyleSheet(globalVariable.circle_red_SheetStyle)
+        #交易日三大市场实时更新所有股票数据
         if ((globalVariable.getValue()==2 and globalVariable.isUSMarketDay()) \
                     or (globalVariable.getValue()==1 and globalVariable.isZhMarketDay()) \
                     or (globalVariable.getValue()==5 and globalVariable.isHKMarketDay()))\
                      and a==0:
             self.table_thread.start()
+        #k线图，A股交易日，非指数更新
         if globalVariable.getValue()==3 and globalVariable.isZhMarketDay() and a==0 and \
             self.stock_code[0:4]!='100.' and self.stock_code[0:4]!='103.' and self.stock_code[0:4]!='104.':
             self.find()
+        #非周末实时更新所有指数
         if not globalVariable.isWeekend() and a==0 and not self.downloadInfoStart:
             self.table_thread2.start()
+        #新闻语音播报每10秒
         if self.time_count==20:
             if self.isNewsReportStop:
                 self.news_report_thread5.start()
+                self.isNewsReportStop=False
             self.time_count=0
         self.time_count+=1
 
@@ -786,7 +795,7 @@ class MainWindow(QMainWindow):
         self.tableView.view.setCurrentIndex(self.tableView.model.index(self.cur_item,0))
         self.isVerticalScrollBar=True
 
-    #键盘事件 esc个股返回不同主界面，返回之前进入的主界面
+    #查找(首字母、数字、指数和板块)
     def alpha_find(self):
         self.find_data=pd.read_csv('list/abbreviation_list.csv',encoding='gbk',dtype={'symbol':str})
         self.find_text_list.clear()
@@ -922,6 +931,7 @@ class MainWindow(QMainWindow):
                 self.fmt.setForeground(QColor("red"))
                 self.find_text_list.mergeCurrentCharFormat(self.fmt)
                 self.find_text_list.textCursor().insertText('>>>')
+    #查找框键盘重载
     def codeTextkeyPressEvent(self,e):
         key = e.key()
         #self.blockFormat = self.find_text_list.textCursor().blockFormat()
@@ -1043,6 +1053,7 @@ class MainWindow(QMainWindow):
                 self.find_code=self.find_data.loc[self.find_first_row,'symbol']
                 self.find_name=f"{self.find_data.loc[self.find_first_row,'name']}--({self.find_data.loc[self.find_first_row,'area']}){self.find_data.loc[self.find_first_row,'industry']}"
 
+    #键盘事件 esc个股返回不同主界面，返回之前进入的主界面
     def keyPressEvent(self, event):
         key = event.key()
         self.blockFormat = self.find_text_list.textCursor().blockFormat()
@@ -1174,6 +1185,7 @@ class MainWindow(QMainWindow):
                     elif self.ui.hk_market.isChecked()==True:
                         globalVariable.setValue(5)
 
+    #查找股票名称，区域和行业板块
     def find_stock_name(self):
         stock=pd.read_csv('list/stock_list.csv',encoding='gbk',dtype={'symbol':str})
         n=len(stock)
@@ -1194,29 +1206,33 @@ class MainWindow(QMainWindow):
             else:
                 l=mid+1
 
+    #右键菜单，添加删除自选
     def create_rightmenu1(self,param):
         #菜单对象
         if globalVariable.getValue()!=2 and globalVariable.getValue()!=5:
             if param==2:
                 row_index = self.tableView.view_rising_speed.currentIndex().row()
+                row_data=self.tableView.rising_speed_data.loc[row_index+1]
             else:
                 row_index = self.tableView.view.currentIndex().row()
+                row_data=self.tableView.stock_data.loc[row_index+1]
             self.stock_menu = QMenu(self)
             self.actionA = QAction(u'加入自选',self)#创建菜单选项对象
             self.stock_menu.addAction(self.actionA)#把动作A选项对象添加到菜单self.groupBox_menu上
             self.stock_menu.popup(QCursor.pos())#声明当鼠标在groupBox控件上右击时，在鼠标位置显示右键菜单 ,exec_,popup两个都可以
-            self.actionA.triggered.connect(lambda:self.add_my_stock(param,row_index)) #将动作A触发时连接到槽函数
+            self.actionA.triggered.connect(lambda:self.add_my_stock(param,row_index,row_data)) #将动作A触发时连接到槽函数
 
     def create_rightmenu2(self):
         #菜单对象
+        row_index = self.tableView.view_my_stock.currentIndex().row()
         self.stock_menu = QMenu(self)
         self.actionB = QAction(u'删除自选',self)#创建菜单选项对象
         #self.actionB.setShortcut('Del')#设置动作A的快捷键
         self.stock_menu.addAction(self.actionB)
         self.stock_menu.popup(QCursor.pos())#声明当鼠标在groupBox控件上右击时，在鼠标位置显示右键菜单 ,exec_,popup两个都可以，
-        self.actionB.triggered.connect(self.del_my_stock)
+        self.actionB.triggered.connect(lambda:self.del_my_stock(row_index))
 
-    def add_my_stock(self,param,row_index):
+    def add_my_stock(self,param,row_index,row_data):
         if param==3:
             for i in range(1,len(self.tableView.stock_data_copy)+1):
                 if self.stock_code==self.tableView.stock_data_copy.loc[i,'代码']:
@@ -1227,9 +1243,8 @@ class MainWindow(QMainWindow):
                     return
             self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.stock_data_copy.loc[self.select_item+1]
         elif param==1:
-            #row_index = self.tableView.view.currentIndex().row()
             for i in range(1,len(self.tableView.my_stock_data)+1):
-                if self.tableView.my_stock_data.loc[i,'代码']==self.tableView.stock_data.loc[row_index+1,'代码']:
+                if self.tableView.my_stock_data.loc[i,'代码']==row_data['代码']:
                     return
             if globalVariable.getValue()==4:
                 w=0
@@ -1242,26 +1257,23 @@ class MainWindow(QMainWindow):
                     return
                 self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.stock_data_copy.loc[self.select_item+1]
             else:
-                self.select_item=row_index
-                self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.stock_data.loc[self.select_item+1]
+                self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=row_data
         elif param==2:
-            row_index = self.tableView.view_rising_speed.currentIndex().row()
             for i in range(1,len(self.tableView.my_stock_data)+1):
-                if self.tableView.my_stock_data.loc[i,'代码']==self.tableView.rising_speed_data.loc[row_index+1,'代码']:
+                if self.tableView.my_stock_data.loc[i,'代码']==row_data['代码']:
                     return
-            self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=self.tableView.rising_speed_data.loc[row_index+1]
+            self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=row_data
         self.tableView.my_stock_data.index = pd.RangeIndex(start=1, stop=len(self.tableView.my_stock_data)+1, step=1)
         self.tableView.reflash_my_stock()
         self.tableView.my_stock_data.to_csv('list/my_stock.csv',encoding='gbk')
 
-    def del_my_stock(self):
-        row_index = self.tableView.view_my_stock.currentIndex().row()
+    def del_my_stock(self,row_index):
         self.tableView.my_stock_data.drop(self.tableView.my_stock_data.index[[row_index]],inplace=True)
         self.tableView.my_stock_data.index = pd.RangeIndex(start=1, stop=len(self.tableView.my_stock_data)+1, step=1)
         self.tableView.reflash_my_stock()
         self.tableView.my_stock_data.to_csv('list/my_stock.csv',encoding='gbk')
 
-    #获取单击目标行，获取选择项的股票代码
+    #单击目标行，获取选择股票的相关信息(全部股票，涨速和自选)
     def clicked_stock_item(self,item):
         self.whichDay=0
         self.item=item
@@ -1318,6 +1330,7 @@ class MainWindow(QMainWindow):
         self.stock_data=self.tableView.my_stock_data
         self.baseInformation.flash_base_information_click(self.my_cur_item,self.stock_data,self.name)
 
+    #双击查询个股k线
     def double_clicked_my_stock_info(self,item):
         self.whichDay=0
         self.item=item
@@ -1330,9 +1343,7 @@ class MainWindow(QMainWindow):
         self.item=item
         cur_item=item.row()
         self.stock_code=self.tableView.rising_speed_data.iat[cur_item,0]
-
         self.find_init()
-    #双击查询个股k线
     def double_clicked_stock_info(self,item):
         self.whichDay=0
         self.item=item
@@ -1406,16 +1417,6 @@ class MainWindow(QMainWindow):
         self.get_candle_thread6.start()
         if globalVariable.marketNum==1 or globalVariable.marketNum==3 or globalVariable.marketNum==2 or globalVariable.marketNum==4:
             self.real_time_thread3.start()
-
-    def curRecentMarketDay(self):
-        date=datetime.datetime.now()
-        for i in range(15):
-            time=date+datetime.timedelta(days=-i)
-            if globalVariable.isMarketDay(time):
-                break
-        str=time.strftime("%Y%m%d %H:%M:%S")
-        date=QDateTime.fromString(str, "yyyyMMdd hh:mm:ss").date()
-        return date
 
     def set_open_close_news_report(self):
         self.isOpenNewsReport=not self.isOpenNewsReport

@@ -89,8 +89,8 @@ class TableThread(QThread):
             elif globalVariable.subCount==8:
                 self.parent.tableView.fund_open_fund_rank()
             elif globalVariable.subCount==9:
-                nums={globalVariable.curRecentMarketDay():1,'近3日':3,'近5日':5,'近10日':10,'近30日':30}
-                pages={globalVariable.curRecentMarketDay():1,'近3日':1,'近5日':1,'近10日':2,'近30日':4}
+                nums={str(globalVariable.curRecentMarketDay().date()):1,'近3日':3,'近5日':5,'近10日':10,'近30日':30}
+                pages={str(globalVariable.curRecentMarketDay().date()):1,'近3日':1,'近5日':1,'近10日':2,'近30日':4}
                 self.parent.tableView.tradedetail(nums[self.parent.tradedetail_text.currentText()],\
                                                   pages[self.parent.tradedetail_text.currentText()])
             self._signal.emit()

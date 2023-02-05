@@ -29,6 +29,7 @@ class DrawChart(QWidget):
         #self.time_share_plot.setGeometry(0,0,self.baseWidth,self.baseheight)
         self.volume_plot= pg.PlotWidget(axisItems={'bottom':stringaxis},enableMenu=False)
         self.volume_plot.setMaximumHeight(60)
+
         #self.volume_plot.setGeometry(0,self.baseheight,self.baseWidth,100)
         self.time_share_layout.addWidget(self.time_share_plot)
         self.time_share_layout.addWidget(self.volume_plot)
@@ -44,6 +45,9 @@ class DrawChart(QWidget):
         self.volume_plot.showGrid(x=False, y=True)
         self.time_share_plot.setMouseEnabled(x=False, y=False)
         self.volume_plot.setMouseEnabled(x=False, y=False)
+        #self.time_share_plot.setMouseMode(False)
+        self.time_share_plot.hideButtons()#隐藏左下角按钮
+        self.volume_plot.hideButtons()
         self.time_share_plot.setXRange(-1, 241, padding=0)
 
         self.time_share_plot.setYRange(self.low_point, self.high_point, padding=0)

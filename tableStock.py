@@ -64,8 +64,10 @@ class TableStock(QTableView):
         self.stock_data_copy=self.stock_data=pd.DataFrame
 
         self.headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        self.period1='2022-09-30%2C2022-06-30%2C2022-03-31%2C2021-12-31%2C2021-09-30'
-        self.period2='2021-06-30%2C2021-03-31%2C2020-12-31%2C2020-09-30%2C2020-06-30'
+        period1='2022-12-31%2C2022-09-30%2C2022-06-30%2C2022-03-31%2C2021-12-31'
+        period2='2021-09-30%2C2021-06-30%2C2021-03-31%2C2020-12-31%2C2020-09-30'
+        period3='2020-06-30%2C2020-03-31%2C2019-12-31%2C2019-09-30%2C2019-06-30'
+        self.period_dict={1:period1,2:period2,3:period3}
         self.order=['代码','名称','最新价','涨跌幅','换手率','成交额','涨速','市盈率',\
                  '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
 
@@ -258,7 +260,8 @@ class TableStock(QTableView):
         self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
 
     def north_plate_flows1(self,days):
-        url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=ADD_MARKET_CAP&sortTypes=-1&pageSize=5000&pageNumber=1&reportName=RPT_MUTUAL_STOCK_NORTHSTA&columns=ALL&source=WEB&client=WEB&filter=(TRADE_DATE%3D%272022-12-22%27)(INTERVAL_TYPE%3D%22{}%22)'.format(days)
+        cur_date=globalVariable.curRecentMarketDay().date()+datetime.timedelta(days=-1)
+        url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=ADD_MARKET_CAP&sortTypes=-1&pageSize=5000&pageNumber=1&reportName=RPT_MUTUAL_STOCK_NORTHSTA&columns=ALL&source=WEB&client=WEB&filter=(TRADE_DATE%3D%27{}%27)(INTERVAL_TYPE%3D%22{}%22)'.format(cur_date,days)
         dd=requests.get(url,headers=self.headers)
         df=pd.DataFrame(dd.json()['result']['data'])
         self.stock_data=df[['SECURITY_CODE','SECURITY_NAME','CLOSE_PRICE','CHANGE_RATE','HOLD_SHARES',\
@@ -401,7 +404,7 @@ class TableStock(QTableView):
     def business_department_rank(self,num):
         self.stock_data=pd.DataFrame()
         for i in range(1,4):
-            url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=TOTAL_BUYER_SALESTIMES_1DAY%2COPERATEDEPT_CODE&sortTypes=-1%2C1&pageSize=500&pageNumber={}&reportName=RPT_RATEDEPT_RETURNT_RANKING&columns=ALL&source=WEB&client=WEB&filter=(STATISTICSCYCLE%3D%220{}%22)'.format(i,num)
+            url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=TOTAL_BUYER_SALESTIMES_1DAY%2COPERATEDEPT_CODE&sortTypes=-1%2C1&pageSize=50&pageNumber={}&reportName=RPT_RATEDEPT_RETURNT_RANKING&columns=ALL&source=WEB&client=WEB&filter=(STATISTICSCYCLE%3D%220{}%22)'.format(i,num)
             dd = requests.get(url, headers=self.headers)
             df=pd.DataFrame(dd.json()['result']['data'])
             del df['OPERATEDEPT_CODE']
@@ -465,8 +468,7 @@ class TableStock(QTableView):
 
     def get_main_indicator(self,code):
         url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code={}'.format(code)
-        headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        df=requests.get(url,headers=headers)
+        df=requests.get(url,headers=self.headers)
         data=DataFrame(df.json()['data'])
         data=data.T
         data.rename(index={'EPSJB':'基本每股收益(元)','EPSKCJB':'扣非每股收益(元)','EPSXS':'稀释每股收益(元)',\
@@ -491,14 +493,12 @@ class TableStock(QTableView):
         self.model2=modelAnalysisTable.AnalysisTable(self.stock_data1)
 
     def get_asset_liability(self,code):
-        url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/zcfzbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period1,code)
-        url1='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/zcfzbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period2,code)
-        headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        df=requests.get(url,headers=headers)
-        df1=requests.get(url1,headers=headers)
-        data=DataFrame(df.json()['data'])
-        data1=DataFrame(df1.json()['data'])
-        data=pd.concat([data,data1],ignore_index=True)
+        data=pd.DataFrame()
+        for i in range(1,3):
+            url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/zcfzbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period_dict[i],code)
+            df=requests.get(url,headers=self.headers)
+            data1=DataFrame(df.json()['data'])
+            data=pd.concat([data,data1],ignore_index=True)
         data=data.T
         data.rename(index={'MONETARYFUNDS':'货币资金','LEND_FUND':'拆出资金','NOTE_ACCOUNTS_RECE':'应收票据及应收账款','ACCOUNTS_RECE':'应收账款',\
         'NOTE_RECE':'其中:应收票据','PREPAYMENT':'预付款项','TOTAL_OTHER_RECE':'其他应收款合计','CURRENT_ASSET_BALANCE':'流动资产平衡项目','NONCURRENT_ASSET_BALANCE':'非流动资产平衡项目',\
@@ -528,14 +528,12 @@ class TableStock(QTableView):
         self.model2=modelAnalysisTable.AnalysisTable(self.stock_data1)
 
     def get_Income(self,code):
-        url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/lrbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period1,code)
-        url1='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/lrbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period2,code)
-        headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        df=requests.get(url,headers=headers)
-        df1=requests.get(url1,headers=headers)
-        data=DataFrame(df.json()['data'])
-        data1=DataFrame(df1.json()['data'])
-        data=pd.concat([data,data1],ignore_index=True)
+        data=pd.DataFrame()
+        for i in range(1,3):
+            url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/lrbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period_dict[i],code)
+            df=requests.get(url,headers=self.headers)
+            data1=DataFrame(df.json()['data'])
+            data=pd.concat([data,data1],ignore_index=True)
         data=data.T
         data.rename(index={'TOTAL_OPERATE_INCOME':'营业总收入','OPERATE_INCOME':'营业收入','FEE_COMMISSION_INCOME':'其中:手续费及佣金收入',\
         'INTEREST_INCOME':'利息收入','TOTAL_OPERATE_COST':'营业总成本','OPERATE_COST':'营业成本','ASSET_IMPAIRMENT_INCOME':'资产减值损失(新)',\
@@ -577,14 +575,12 @@ class TableStock(QTableView):
         self.model2=modelAnalysisTable.AnalysisTable(self.stock_data1)
 
     def get_cash_flow(self,code):
-        url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/xjllbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period1,code)
-        url1='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/xjllbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period2,code)
-        headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27'}
-        df=requests.get(url,headers=headers)
-        df1=requests.get(url1,headers=headers)
-        data=DataFrame(df.json()['data'])
-        data1=DataFrame(df1.json()['data'])
-        data=pd.concat([data,data1],ignore_index=True)
+        data=pd.DataFrame()
+        for i in range(1,3):
+            url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/xjllbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates={}&code={}'.format(self.period_dict[i],code)
+            df=requests.get(url,headers=self.headers)
+            data1=DataFrame(df.json()['data'])
+            data=pd.concat([data,data1],ignore_index=True)
         data=data.T
         data.rename(index={'SALES_SERVICES':'销售商品、提供劳务收到的现金','DEPOSIT_INTERBANK_ADD':'客户存款和同业存放款项净增加额',\
         'RECEIVE_INTEREST_COMMISSION':'收取利息、手续费及佣金的现金','RECEIVE_OTHER_OPERATE':'收到其他与经营活动有关的现金',\

@@ -8,12 +8,13 @@ from PySide6.QtGui import QColor,QTextCharFormat,QTextCursor,QFont
 import globalVariable
 
 class BaseInformation():
-    def __init__(self,code,name,statusbar):
+    def __init__(self,parent):
+        self.parent=parent
         super().__init__()
         self.isKC=False
-        self.base_information(code,name)
+        self.base_information(self.parent.stock_code,self.parent.name)
         self.buy_sell_information()
-        self.initLabel(statusbar)
+        self.initLabel(self.parent.ui.statusbar)
         self.text_count=14
 
     def base_information(self,code,name):

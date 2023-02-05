@@ -144,7 +144,7 @@ class RealTimeThread(QThread):
             url='http://25.push2.eastmoney.com/api/qt/stock/get?ut=fa5fd1943c7b386f172d6893dbfba10b&fltt=2&invt=2&volt=2&fields=f116,f84,f85,f162,f31,f32,f33,f34,f35,f36,f37,f38,f39,f40,f20,f19,f18,f17,f16,f15,f14,f13,f12,f11,f531&secid={}.{}&_=1666089246963'.format(num,code)
             data=requests.get(url=url,headers=headers).json()['data']
             for i in range(0,10,2):
-                if data['f'+str(i+31)]!='' and data['f'+str(i+31)]!='-':
+                if data[f'f{i+31}']!='' and data[f'f{i+31}']!='-':
                     if data[f'f{i+31}']>self.parent.pre_close:
                         self.parent.baseInformation.buy_sell_Var[f'self.sell_price{5-i//2}'].setPalette(globalVariable.pered)
                     elif data[f'f{i+31}']<self.parent.pre_close:
@@ -166,7 +166,7 @@ class RealTimeThread(QThread):
                 else:
                     self.parent.baseInformation.buy_sell_Var[f'self.buy_price{5-i//2}'].setText('')
                 sc=''
-                if data['f'+str(i+32)]!='' and data[f'f{i+32}']!='-':
+                if data[f'f{i+32}']!='' and data[f'f{i+32}']!='-':
                     sc=str(round(data[f'f{i+32}']))
                 self.parent.baseInformation.buy_sell_Var[f'self.sell_num{5-i//2}'].setText(sc)
                 sc=''
@@ -188,6 +188,6 @@ class RealTimeThread(QThread):
 
     def run(self):
             self.get_time_share_tick_data()
-            self.flash_buy_sell_and_capital()
             self.deal_with_time_share_tick_data()
             self._signal.emit()
+            self.flash_buy_sell_and_capital()

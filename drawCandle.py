@@ -68,8 +68,12 @@ class DrawChart(QWidget):
 
         self.candle_plot.showGrid(x=False, y=True)
         self.volume_plot.showGrid(x=False, y=True)
-        self.candle_plot.setMouseEnabled(x=False, y=False)
+        self.candle_plot.setMouseEnabled(x=False, y=False)# 禁用轴操作
         self.volume_plot.setMouseEnabled(x=False, y=False)
+        self.candle_plot.setAntialiasing(True)
+        self.volume_plot.setAntialiasing(True)
+        self.candle_plot.hideButtons()#隐藏左下角按钮
+        self.volume_plot.hideButtons()
         self.candle_plot.setXRange(self.idx_start-self.idx_range-1, self.idx_start, padding=0)
         self.volume_plot.setXRange(self.idx_start-self.idx_range-1, self.idx_start, padding=0)
 

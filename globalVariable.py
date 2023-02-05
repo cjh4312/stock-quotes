@@ -5,7 +5,7 @@
 import os,pytz
 import datetime
 from PySide6.QtGui import QPalette,QColor
-from PySide6.QtCore import Qt,QSettings
+from PySide6.QtCore import Qt,QSettings,QDateTime
 
 settings = QSettings("config.ini", QSettings.IniFormat)
 
@@ -105,8 +105,13 @@ def curRecentMarketDay():
     for i in range(15):
         time=date+datetime.timedelta(days=-i)
         if isMarketDay(time):
-            break
-    return str(time.date())
+            return time
+    return 0
+
+def time_to_QDateTime(time):
+    str=time.strftime("%Y%m%d %H:%M:%S")
+    date=QDateTime.fromString(str, "yyyyMMdd hh:mm:ss").date()
+    return date
 
 def isMarketDay(date_zh):
     Vacation=eval(settings.value("General/Vacation_ZH"))
@@ -118,8 +123,7 @@ def isMarketDay(date_zh):
         if local==date_zh and localtime<150000:
             return False
         return True
-    else:
-        return False
+    return False
 
 def format_conversion(grid):
     if isinstance(grid,float):
