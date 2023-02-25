@@ -69,14 +69,15 @@ class BaseInformation():
         pre_close=data.iat[cur_item,16]
         self.code_label.setText(str(data.iat[cur_item,0]))
         self.name_label.setText(name)
-        if data.iat[cur_item,3]<0:
-            self.base_info['self.now_price_data'].setPalette(globalVariable.pegreen)
-            self.base_info['self.pctChg_data'].setPalette(globalVariable.pegreen)
-        else:
-            self.base_info['self.now_price_data'].setPalette(globalVariable.pered)
-            self.base_info['self.pctChg_data'].setPalette(globalVariable.pered)
-        self.base_info['self.now_price_data'].setText(str(data.iat[cur_item,2]))
-        self.base_info['self.pctChg_data'].setText(f"{data.iat[cur_item,3]}%")
+        if (globalVariable.getValue()==1 and not globalVariable.isZhMarketDay()) or globalVariable.getValue()==2 or globalVariable.getValue()==5:
+            if data.iat[cur_item,3]<0:
+                self.base_info['self.now_price_data'].setPalette(globalVariable.pegreen)
+                self.base_info['self.pctChg_data'].setPalette(globalVariable.pegreen)
+            else:
+                self.base_info['self.now_price_data'].setPalette(globalVariable.pered)
+                self.base_info['self.pctChg_data'].setPalette(globalVariable.pered)
+            self.base_info['self.now_price_data'].setText(str(data.iat[cur_item,2]))
+            self.base_info['self.pctChg_data'].setText(f"{data.iat[cur_item,3]}%")
         if data.iat[cur_item,13]<pre_close:
             self.base_info['self.high_data'].setPalette(globalVariable.pegreen)
         else:

@@ -187,7 +187,9 @@ class RealTimeThread(QThread):
                 self.parent.baseInformation.buy_sell_Var[f'self.buy_num{5-i//2}'].setText('')
 
     def run(self):
-            self.get_time_share_tick_data()
-            self.deal_with_time_share_tick_data()
-            self._signal.emit()
-            self.flash_buy_sell_and_capital()
+        self.isFlaseRealTime=False
+        self.get_time_share_tick_data()
+        self.flash_buy_sell_and_capital()
+        self.deal_with_time_share_tick_data()
+        self._signal.emit()
+        self.isFlaseRealTime=True

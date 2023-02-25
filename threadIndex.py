@@ -25,11 +25,11 @@ class IndexThread(QThread):
             stockInformation.download()
             self.parent.downloadInfoStart=False
             self._finishSignal.emit()
-
-        if globalVariable.marketNum==1 or globalVariable.marketNum==3 or globalVariable.marketNum==5 or globalVariable.marketNum==6:
+        #刷新市场对应的指数(亚洲和欧美)
+        if globalVariable.marketNum==1 or globalVariable.marketNum==5:
             worldIndexData=self.parent.worldIndex.getAllIndex()
             self.parent.baseInformation.flashLabel(0,worldIndexData)
-        elif globalVariable.marketNum==2 or globalVariable.marketNum==4:
+        elif globalVariable.marketNum==2:
             worldIndexData=self.parent.worldIndex.getAllIndex()
             self.parent.baseInformation.flashLabel(8,worldIndexData)
 

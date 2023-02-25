@@ -4,8 +4,7 @@
 #     pass
 from PySide6.QtCore import Signal,QThread
 import globalVariable
-
-#import datetime
+import datetime
 
 class TableThread(QThread):
     #  通过类成员对象定义信号对象
@@ -17,27 +16,38 @@ class TableThread(QThread):
         super(TableThread, self).__init__()
         self.parent=parent
         self.num=6
+        self.name=[]
 
     def __del__(self):
         self.wait()
 
     def run(self):
+        t=str(datetime.datetime.now())
         if globalVariable.getValue()==1:
+            #获取所有A股信息
             self.parent.tableView.get_zh_market()
-
+            #如果是板块
             if self.parent.isFlashBoard:
                 self.parent.tableView.get_industry_concept_board(self.parent.board_code)
                 #self.parent.tableView.reflashView()
             self.parent.tableView.init_ui()
-
+#            print(datetime.datetime.now()-t)
+            n=len(self.parent.tableView.stock_data_copy)
             for i in range(1,len(self.parent.tableView.my_stock_data)+1):
-                for j in range(1,len(self.parent.tableView.stock_data_copy)+1):
-                    if self.parent.tableView.my_stock_data.loc[i,'代码']==self.parent.tableView.stock_data_copy.loc[j,'代码']:
-                        self.parent.tableView.my_stock_data.loc[i]=self.parent.tableView.stock_data_copy.loc[j]
+                l=0
+                r=n-1
+                while l<=r:
+                    mid=(l+r)//2
+                    if self.parent.tableView.stock_data_copy.iat[mid,0]==self.parent.tableView.my_stock_data.loc[i,'代码']:
+                        self.parent.tableView.my_stock_data.loc[i]=self.parent.tableView.stock_data_copy.loc[mid+1]
                         break
-            self.parent.tableView.my_stock_data.to_csv('list/my_stock.csv',encoding='gbk')
-
+                    elif self.parent.tableView.stock_data_copy.iat[mid,0]>self.parent.tableView.my_stock_data.loc[i,'代码']:
+                        r=mid-1
+                    else:
+                        l=mid+1
+            self.parent.tableView.my_stock_data.to_csv('list/my_stock.csv',encoding='gbk',index=False)
             self._signal.emit()
+#            print(datetime.datetime.now()-t)
             if self.num==6:
                 rise=0
                 fall=0
@@ -51,8 +61,30 @@ class TableThread(QThread):
                     self.num=0
             self.num+=1
 
+            if globalVariable.isZhMarketDay() and globalVariable.getValue()==1 and t[11:16]>='09:30':
+                file=open(r'./list/rising_speed.txt','a')
+                for row_index,row in self.parent.tableView.rising_speed_data.iterrows():
+                    speed=self.parent.tableView.rising_speed_data.loc[row_index,'涨速']
+                    name=self.parent.tableView.rising_speed_data.loc[row_index,'名称']
+                    code=self.parent.tableView.rising_speed_data.loc[row_index,'代码']
+                    if speed>=5:
+                        text=f"{datetime.datetime.now()} {code} {name} {speed}\n"
+                        if code not in self.name:
+                            file.writelines(text)
+                            self.name.append(code)
+                    elif speed>=3:
+                        text=f"{datetime.datetime.now()} {code} {name} {speed}\n"
+                        if code not in self.name:
+                            file.writelines(text)
+                            self.name.append(code)
+                file.close()
+
         elif globalVariable.getValue()==2:
-            self.parent.tableView.get_us_market()
+            if self.parent.isUsZhStock:
+                fs='b:mk0201'
+            else:
+                fs='m:105,m:106,m:107'
+            self.parent.tableView.get_us_market(fs)
             self.parent.tableView.init_ui()
             self._signal.emit()
         elif globalVariable.getValue()==5:

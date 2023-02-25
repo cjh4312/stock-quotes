@@ -80,6 +80,7 @@
     <addaction name="zh_market"/>
     <addaction name="us_market"/>
     <addaction name="hk_market"/>
+    <addaction name="us_zh_stock"/>
    </widget>
    <widget class="QMenu" name="menu_3">
     <property name="title">
@@ -109,6 +110,9 @@
    </property>
   </widget>
   <action name="download_d">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>下载k线数据</string>
    </property>
@@ -188,6 +192,14 @@
   <action name="pick_stocks">
    <property name="text">
     <string>公式选股</string>
+   </property>
+  </action>
+  <action name="us_zh_stock">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>美中概股</string>
    </property>
   </action>
  </widget>

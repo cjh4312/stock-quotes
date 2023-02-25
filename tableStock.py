@@ -20,8 +20,9 @@ class TableStock(QTableView):
     def __init__(self):
         super(TableStock, self).__init__()
         self.sort_bool=[False]*20
+        self.sort_list=['f12','f14','f2','f3','f8','f6','f22','f9','f20','f21','f25','f24',\
+                        'f5','f15','f16','f17','f18']
         self.pre_index=3
-
         self.sort_bool[self.pre_index]=True
         self.view = QTableView()
         self.view.setMinimumHeight(946)
@@ -72,7 +73,7 @@ class TableStock(QTableView):
                  '总市值','流通市值','今年','60日','成交量','最高','最低','今开','昨收']
 
     def get_hk_market(self):
-        url='http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=5000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:116+t:3,m:116+t:4,m:116+t:1,m:116+t:2&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667966922156'
+        url=f'http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=5000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid={self.sort_list[self.pre_index]}&fs=m:116+t:3,m:116+t:4,m:116+t:1,m:116+t:2&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667966922156'
         self.stock_data=pd.DataFrame(requests.Session().get(url,headers=self.headers).json()['data']['diff'])
         self.stock_data.rename(columns={'f12':'代码','f14':'名称','f15':'最高','f2':'最新价','f3':'涨跌幅',\
               'f5':'成交量','f6':'成交额','f16':'最低','f17':'今开','f8':'换手率','f9':'市盈率','f18':'昨收',\
@@ -82,8 +83,8 @@ class TableStock(QTableView):
         self.stock_data=self.stock_data.replace('-',0)
         self.stock_data[self.stock_data.columns[2:]]=self.stock_data[self.stock_data.columns[2:]].astype(float)
 
-    def get_us_market(self):
-        url='http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=13000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:105,m:106,m:107&fields=f2,f3,f5,f6,f8,f9,f12,f13,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667962034515'
+    def get_us_market(self,fs):
+        url=f'http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=20000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid={self.sort_list[self.pre_index]}&fs={fs}&fields=f2,f3,f5,f6,f8,f9,f12,f13,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667962034515'
         self.stock_data=pd.DataFrame(requests.Session().get(url,headers=self.headers).json()['data']['diff'])
         self.stock_data.rename(columns={'f14':'名称','f15':'最高','f2':'最新价','f3':'涨跌幅',\
               'f5':'成交量','f6':'成交额','f16':'最低','f17':'今开','f8':'换手率','f9':'市盈率','f18':'昨收',\
@@ -94,7 +95,7 @@ class TableStock(QTableView):
         self.stock_data[self.stock_data.columns[2:]]=self.stock_data[self.stock_data.columns[2:]].astype(float)
 
     def get_zh_market(self):
-        url='http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=6000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=1&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667954879297'
+        url=f'http://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=6000&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=1&fid={self.sort_list[self.pre_index]}&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048&fields=f2,f3,f5,f6,f8,f9,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22&_=1667954879297'
         self.stock_data=pd.DataFrame(requests.Session().get(url,headers=self.headers).json()['data']['diff'])
         self.stock_data.rename(columns={'f14':'名称','f12':'代码','f15':'最高','f2':'最新价','f3':'涨跌幅',\
               'f5':'成交量','f6':'成交额','f16':'最低','f17':'今开','f8':'换手率','f9':'市盈率','f18':'昨收',\
@@ -102,16 +103,16 @@ class TableStock(QTableView):
         self.stock_data=self.stock_data[self.order]
         #self.stock_data=self.stock_data.replace('-',0)
         self.stock_data[self.stock_data.columns[2:]]=self.stock_data[self.stock_data.columns[2:]].astype(float)
-        #self.stock_data[['最新价','涨跌幅','换手率','市盈率','涨速','60日','今年','最高','最低','今开','昨收']]=self.stock_data[['最新价','涨跌幅','换手率','市盈率','涨速','60日','今年','最高','最低','今开','昨收']]/100
-        self.stock_data_copy=self.stock_data.copy(deep=True)
+        #按代码排序所有A股，可以更快查询、更新自选股的实时信息
+        self.stock_data_copy=self.stock_data.sort_values(by=self.stock_data.columns[0] , ascending=True,kind="mergesort")
         self.stock_data_copy.index = pd.RangeIndex(start=1, stop=len(self.stock_data_copy)+1, step=1)
         if os.path.exists('list/my_stock.csv'):
             self.my_stock_data=pd.read_csv('list/my_stock.csv',encoding="gbk",dtype={'代码':str})
-            self.my_stock_data.drop(self.my_stock_data.columns[[0]],axis=1,inplace=True)
+            #self.my_stock_data.drop(self.my_stock_data.columns[[0]],axis=1,inplace=True)
             self.my_stock_data.index = pd.RangeIndex(start=1, stop=len(self.my_stock_data)+1, step=1)
         else:
             self.my_stock_data=pd.DataFrame(columns=self.order)
-        self.rising_speed_data=self.stock_data_copy.sort_values(by=self.stock_data_copy.columns[6] , ascending=False,kind="mergesort")
+        self.rising_speed_data=self.stock_data.sort_values(by=self.stock_data.columns[6] , ascending=False,kind="mergesort")
         self.rising_speed_data=self.rising_speed_data[0:30]
         #self.rising_speed_data=self.rising_speed_data.drop(self.stock_data_copy.columns[6:17],axis=1)
         self.rising_speed_data.index = pd.RangeIndex(start=1, stop=len(self.rising_speed_data)+1, step=1)
@@ -123,24 +124,25 @@ class TableStock(QTableView):
                 t=False
                 c=self.stock_data_copy.loc[i,'最新价']
                 C=self.stock_data_copy.loc[i,'昨收']
-                l=self.stock_data_copy.loc[i,'最低']
-                o=self.stock_data_copy.loc[i,'今开']
                 from decimal import Decimal, ROUND_HALF_UP
-                #没有交易，涨停的股去除
+                #没有交易,涨停的,st去除
                 if c==0 or float(Decimal(str(C*1.1)).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP))==c or\
                     float(Decimal(str(C*1.2)).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP))==c or\
                     self.stock_data_copy.loc[i,'名称'][0:1]=='*' or self.stock_data_copy.loc[i,'名称'][0:1]=='s' or\
                     self.stock_data_copy.loc[i,'名称'][0:1]=='S':
                     continue
                 H=self.stock_data_copy.loc[i,'最高']
+                l=self.stock_data_copy.loc[i,'最低']
+                o=self.stock_data_copy.loc[i,'今开']
                 #收盘涨幅超过2.5且接近最高
                 if (H-c)/c<=0.003 and self.stock_data_copy.loc[i,'涨跌幅']>=2.5:
                     t=True
                     data.loc[len(data)+1]=self.stock_data_copy.loc[i]
+                #取开盘和收盘价格低的那个
                 if c>o:
                     c=o
                 #收盘下阴线超过3%
-                if (c-l)/c>=0.03 and not t:
+                if c!=0 and (c-l)/c>=0.03 and not t:
                     data.loc[len(data)+1]=self.stock_data_copy.loc[i]
             self.stock_data=data.sort_values(by=data.columns[3] , ascending=False,kind="mergesort")
             self.stock_data.index = pd.RangeIndex(start=1, stop=len(self.stock_data)+1, step=1)
@@ -260,7 +262,7 @@ class TableStock(QTableView):
         self.model=modelAnalysisTable.AnalysisTable(self.stock_data)
 
     def north_plate_flows1(self,days):
-        cur_date=globalVariable.curRecentMarketDay().date()+datetime.timedelta(days=-1)
+        cur_date=globalVariable.curRecentMarketDay().date()
         url='https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=ADD_MARKET_CAP&sortTypes=-1&pageSize=5000&pageNumber=1&reportName=RPT_MUTUAL_STOCK_NORTHSTA&columns=ALL&source=WEB&client=WEB&filter=(TRADE_DATE%3D%27{}%27)(INTERVAL_TYPE%3D%22{}%22)'.format(cur_date,days)
         dd=requests.get(url,headers=self.headers)
         df=pd.DataFrame(dd.json()['result']['data'])

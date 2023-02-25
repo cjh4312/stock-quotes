@@ -1,5 +1,5 @@
 # This Python file uses the following encoding: utf-8
-import sys,datetime,time
+import sys,datetime
 import pandas as pd
 #import figureCanvas
 import worldIndex,drawTimeShare,drawCandle,globalVariable,getDate,tableStock,baseInformation
@@ -7,7 +7,7 @@ import threadRealTime,threadDealTimeShare,threadNewsReport,threadGetCandle,threa
 from PySide6.QtWidgets import (QRadioButton,QMenu,QTextEdit,QApplication,QDateTimeEdit,QMainWindow,
                     QMessageBox,QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLineEdit,QComboBox)
 from PySide6.QtGui import QColor,QTextCharFormat,QTextCursor,QFont,QIcon,QAction,QCursor
-from PySide6.QtCore import QThread,Qt,QTimer,QTime
+from PySide6.QtCore import QThread,Qt,QTimer
 
 # Important:
 # You need to run the following command to generate the ui_form.py file
@@ -67,7 +67,6 @@ class MainWindow(QMainWindow):
         self.isAsia=True
         self.freq='daily'
         self.isFlashBoard=False
-        self.isNewsReportStop=True
         self.isHotKey=False
         self.whichDay=0
         self.fmt=QTextCharFormat()
@@ -75,10 +74,13 @@ class MainWindow(QMainWindow):
         self.text=''
         self.isBoard=False
         self.downloadInfoStart=False
+        self.isManualOpenNewsReport=False
+        self.isFlaseRealTime=True
+        self.isUsZhStock=False
         globalVariable._init()
-        globalVariable.setValue(1)
         self.settings = globalVariable.settings
         self.downloadInfoTime=self.settings.value("General/curTime")
+
         self.isOpenNewsReport=eval(self.settings.value("General/newsReport"))
         self.ui.newsReport.setChecked(not self.isOpenNewsReport)
 
@@ -340,6 +342,7 @@ class MainWindow(QMainWindow):
 
         self.ui.zh_market.triggered.connect(self.setMarket)
         self.ui.us_market.triggered.connect(self.setMarket)
+        self.ui.us_zh_stock.triggered.connect(self.setMarket)
         self.ui.hk_market.triggered.connect(self.setMarket)
         self.ui.financial_flows.triggered.connect(self.financialFlows)
         self.royalFlushPlateFlows.clicked.connect(self.financialFlows)
@@ -373,16 +376,15 @@ class MainWindow(QMainWindow):
         self.tableView.view_rising_speed.customContextMenuRequested.connect(lambda:self.create_rightmenu1(2))
         self.tableView.view_my_stock.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tableView.view_my_stock.customContextMenuRequested.connect(self.create_rightmenu2)
-
-        sec = QTime.currentTime().second()
-        msec= QTime.currentTime().msec()
-        if sec%3==2 and msec>400:
-            time.sleep(1)
-        while(1):
-            sec = QTime.currentTime().second()
-            msec= QTime.currentTime().msec()
-            if sec%3==2 and msec>400:
-                break
+#        sec = QTime.currentTime().second()
+#        msec= QTime.currentTime().msec()
+#        if sec%3==2 and msec>400:
+#            time.sleep(1)
+#        while(1):
+#            sec = QTime.currentTime().second()
+#            msec= QTime.currentTime().msec()
+#            if sec%3==2 and msec>400:
+#                break
         self.timer=QTimer()
         self.timer.timeout.connect(self.flashTableData)
         self.timer.start(self.time_interval)
@@ -540,6 +542,7 @@ class MainWindow(QMainWindow):
         if self.sender()==self.ui.us_market:
             if self.ui.us_market.isChecked==True:
                 return
+            self.isUsZhStock=False
             globalVariable.PreInterface=globalVariable.getValue()
             globalVariable.setValue(2)
             globalVariable.marketNum=2
@@ -548,6 +551,19 @@ class MainWindow(QMainWindow):
             self.ui.zh_market.setChecked(False)
             self.ui.us_market.setChecked(True)
             self.ui.hk_market.setChecked(False)
+            self.ui.us_zh_stock.setChecked(False)
+            self.main2.hide()
+        elif self.sender()==self.ui.us_zh_stock:
+            self.isUsZhStock=True
+            globalVariable.PreInterface=globalVariable.getValue()
+            globalVariable.setValue(2)
+            globalVariable.marketNum=2
+            self.isAsia=False
+            self.isclicked=True
+            self.ui.zh_market.setChecked(False)
+            self.ui.us_market.setChecked(True)
+            self.ui.hk_market.setChecked(False)
+            self.ui.us_zh_stock.setChecked(True)
             self.main2.hide()
         elif self.sender()==self.ui.zh_market:
             if self.ui.zh_market.isChecked==True:
@@ -555,12 +571,14 @@ class MainWindow(QMainWindow):
             globalVariable.PreInterface=globalVariable.getValue()
             globalVariable.setValue(1)
             globalVariable.marketNum=1
+
             self.isAsia=True
             self.isFlashBoard=False
             self.isclicked=True
             self.ui.us_market.setChecked(False)
             self.ui.zh_market.setChecked(True)
             self.ui.hk_market.setChecked(False)
+            self.ui.us_zh_stock.setChecked(False)
             self.main2.show()
         elif self.sender()==self.ui.hk_market:
             if self.ui.hk_market.isChecked==True:
@@ -568,11 +586,13 @@ class MainWindow(QMainWindow):
             globalVariable.PreInterface=globalVariable.getValue()
             globalVariable.setValue(5)
             globalVariable.marketNum=5
+
             self.isAsia=True
             self.isclicked=True
             self.ui.us_market.setChecked(False)
             self.ui.zh_market.setChecked(False)
             self.ui.hk_market.setChecked(True)
+            self.ui.us_zh_stock.setChecked(False)
             self.main2.hide()
         #print(globalVariable.getValue())
         self.baseInformation.code_label.setText(str(self.stock_code))
@@ -599,7 +619,6 @@ class MainWindow(QMainWindow):
         #self.tableView.setViewWidth()
         self.main2.hide()
         self.right_widget.hide()
-        #globalVariable.marketNum=3
         globalVariable.isBoardWidth=False
         self.dateEdit.setCurrentSection(QDateTimeEdit.DaySection)
         if self.sender()==self.ui.financial_flows:
@@ -688,32 +707,40 @@ class MainWindow(QMainWindow):
     #3大股市开市时间每5秒刷新一次数据
     def flashTableData(self):
         #判断5秒
-        a=self.time_count%10
+        a=self.time_count%10 #发起所有股票 (1-2)---- 发起全球指数 (3)-- 发起分时图 (4-5)-- --
+        #设置新闻播报时间段,是否手动设置
+        t=str(datetime.datetime.now())
+        if (t[11:16]>'15:00' or globalVariable.isWeekend()) and not self.isManualOpenNewsReport:
+            self.isOpenNewsReport=False
+            self.ui.newsReport.setChecked(not self.isOpenNewsReport)
+        #非交易日，非周末，更新指数、板块和个股数据每天9点后
+        if t[0:10]>str(self.downloadInfoTime) and t[11:16]>='09:00' and not globalVariable.isWeekend():
+            with open(r'./list/rising_speed.txt','w') as f:
+                f.close()
+            if not self.downloadInfoStart:
+                self.downloadStart()
         #中国市场
         if globalVariable.marketNum==1:
             if globalVariable.isZhMarketDay():#交易日，非指数
                 if self.stock_code[0:4]!='100.' or self.stock_code[0:4]!='103.' or self.stock_code[0:4]!='104.':
-                    if self.time_count%2==1:#1秒刷新买卖盘,分笔成交
+                    if self.time_count%2==1 and self.isFlaseRealTime:#1秒刷新买卖盘,分笔成交
                         self.real_time_thread3.start()
-                    if a==0:#5秒刷新分时图，显示交易中
+                    if a==6:#5秒刷新分时图，显示交易中
                         self.draw_time_share_thread4.start()
                         self.baseInformation.circle.setStyleSheet(globalVariable.circle_green_SheetStyle)
-            else:#非交易日，非周末，更新指数、板块和个股数据每天9点后
+            else:
                 if a==0:
                     self.baseInformation.circle.setStyleSheet(globalVariable.circle_red_SheetStyle)
-                    t=str(datetime.datetime.now())
-                    if not globalVariable.isWeekend() and t[0:10]>str(self.downloadInfoTime) and\
-                                    t[11:16]>'09:00' and not self.downloadInfoStart:
-                        self.downloadStart()
+
         #港股分时图刷新
-        elif globalVariable.marketNum==5 and a==0:
+        elif globalVariable.marketNum==5 and a==8:
             if globalVariable.isHKMarketDay():
                 self.draw_time_share_thread4.start()
                 self.baseInformation.circle.setStyleSheet(globalVariable.circle_green_SheetStyle)
             else:
                 self.baseInformation.circle.setStyleSheet(globalVariable.circle_red_SheetStyle)
         #美股刷新分笔成交和分时图
-        elif globalVariable.marketNum==2 and a==0:
+        elif globalVariable.marketNum==2 and a==8:
             if globalVariable.isUSMarketDay():
                 self.draw_time_share_thread4.start()
                 self.real_time_thread3.start()
@@ -731,13 +758,12 @@ class MainWindow(QMainWindow):
             self.stock_code[0:4]!='100.' and self.stock_code[0:4]!='103.' and self.stock_code[0:4]!='104.':
             self.find()
         #非周末实时更新所有指数
-        if not globalVariable.isWeekend() and a==0 and not self.downloadInfoStart:
+        if not globalVariable.isWeekend() and a==4 and not self.downloadInfoStart:
             self.table_thread2.start()
         #新闻语音播报每10秒
         if self.time_count==20:
-            if self.isNewsReportStop:
-                self.news_report_thread5.start()
-                self.isNewsReportStop=False
+            self.news_report_thread5.start()
+            self.isNewsReportStop=False
             self.time_count=0
         self.time_count+=1
 
@@ -1155,7 +1181,7 @@ class MainWindow(QMainWindow):
         elif key == Qt.Key_Escape:
             if globalVariable.PreInterface==4:
                 if globalVariable.getValue()==3:
-                    globalVariable.PreInterface=4
+
                     globalVariable.setValue(4)
                     #self.tableView.view.verticalScrollBar().setValue(self.cur_item-15)
                     self.tableView.view.setCurrentIndex(self.tableView.model.index(self.cur_item,0))
@@ -1265,7 +1291,7 @@ class MainWindow(QMainWindow):
             self.tableView.my_stock_data.loc[len(self.tableView.my_stock_data)+1]=row_data
         self.tableView.my_stock_data.index = pd.RangeIndex(start=1, stop=len(self.tableView.my_stock_data)+1, step=1)
         self.tableView.reflash_my_stock()
-        self.tableView.my_stock_data.to_csv('list/my_stock.csv',encoding='gbk')
+        self.tableView.my_stock_data.to_csv('list/my_stock.csv',encoding='gbk',index=False)
 
     def del_my_stock(self,row_index):
         self.tableView.my_stock_data.drop(self.tableView.my_stock_data.index[[row_index]],inplace=True)
@@ -1290,8 +1316,9 @@ class MainWindow(QMainWindow):
         if globalVariable.getValue()==1:
             self.find_stock_name()
             self.baseInformation.flash_base_information_click(self.cur_item,self.stock_data,self.name)
+            if not globalVariable.isZhMarketDay():
+                self.real_time_thread3.start()
             self.draw_time_share_thread4.start()
-            self.real_time_thread3.start()
 
         elif globalVariable.getValue()==2 or globalVariable.getValue()==5:
             self.draw_time_share_thread4.start()
@@ -1310,11 +1337,12 @@ class MainWindow(QMainWindow):
         self.stock_code=self.tableView.rising_speed_data.iat[self.rising_speed,0]
         self.name=self.tableView.rising_speed_data.iat[self.rising_speed,1]
 
-        self.draw_time_share_thread4.start()
-        self.real_time_thread3.start()
         self.find_stock_name()
         self.stock_data=self.tableView.rising_speed_data
         self.baseInformation.flash_base_information_click(self.rising_speed,self.stock_data,self.name)
+        if not globalVariable.isZhMarketDay():
+            self.real_time_thread3.start()
+        self.draw_time_share_thread4.start()
 
     def clicked_my_stock_item(self,item):
         self.whichDay=0
@@ -1324,11 +1352,11 @@ class MainWindow(QMainWindow):
         self.baseInformation.code_label.setText(self.stock_code)
         self.find_stock_name()
         self.baseInformation.name_label.setText(self.name)
-        self.draw_time_share_thread4.start()
-        self.real_time_thread3.start()
-
         self.stock_data=self.tableView.my_stock_data
         self.baseInformation.flash_base_information_click(self.my_cur_item,self.stock_data,self.name)
+        if not globalVariable.isZhMarketDay():
+            self.real_time_thread3.start()
+        self.draw_time_share_thread4.start()
 
     #双击查询个股k线
     def double_clicked_my_stock_info(self,item):
@@ -1419,6 +1447,7 @@ class MainWindow(QMainWindow):
             self.real_time_thread3.start()
 
     def set_open_close_news_report(self):
+        self.isManualOpenNewsReport=True
         self.isOpenNewsReport=not self.isOpenNewsReport
         self.ui.newsReport.setChecked(not self.isOpenNewsReport)
     def download(self):
