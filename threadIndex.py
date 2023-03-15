@@ -25,15 +25,18 @@ class IndexThread(QThread):
             stockInformation.download()
             self.parent.downloadInfoStart=False
             self._finishSignal.emit()
-        #刷新市场对应的指数(亚洲和欧美)
-        if globalVariable.marketNum==1 or globalVariable.marketNum==5:
-            worldIndexData=self.parent.worldIndex.getAllIndex()
-            self.parent.baseInformation.flashLabel(0,worldIndexData)
-        elif globalVariable.marketNum==2:
-            worldIndexData=self.parent.worldIndex.getAllIndex()
-            self.parent.baseInformation.flashLabel(8,worldIndexData)
+        try:
+            #刷新市场对应的指数(亚洲和欧美)
+            if globalVariable.marketNum==1 or globalVariable.marketNum==5:
+                worldIndexData=self.parent.worldIndex.getAllIndex()
+                self.parent.baseInformation.flashLabel(0,worldIndexData)
+            elif globalVariable.marketNum==2:
+                worldIndexData=self.parent.worldIndex.getAllIndex()
+                self.parent.baseInformation.flashLabel(8,worldIndexData)
 
-        self.parent.worldFuturesData=self.parent.worldIndex.get_futures_data()
+            self.parent.worldFuturesData=self.parent.worldIndex.get_futures_data()
+        except Exception as e:
+            print('Reason:', e)
         i=0
         if self.isTrue:
             for j in range(len(self.parent.worldFuturesData)):

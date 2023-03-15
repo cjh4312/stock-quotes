@@ -6,6 +6,7 @@ from PySide6.QtCore import Signal,QThread
 import globalVariable
 import pandas as pd
 import requests
+import os
 
 class RealTimeThread(QThread):
     #  通过类成员对象定义信号对象
@@ -60,6 +61,36 @@ class RealTimeThread(QThread):
         elif globalVariable.marketNum==2 or globalVariable.marketNum==4:
             if code[0:4]=='105.' or code[0:4]=='106.' or code[0:4]=='107.':
                 (self.parent.pre_close,self.data)=self.parent.worldIndex.get_us_time_share_tick(code)
+
+    def deal_with_time_share_tick_html(self):
+        self.parent.time_share_data = ''
+        l = len(self.data)
+        for i in range(0,l):
+            ok=self.data[i].split(",", 5)
+            if ok[4]=='2':
+                flag='<span style="color:red">B</span>'
+            elif ok[4]=='1':
+                flag='<span style="color:green">S</span>'
+            else:
+                flag='  '
+            a=f'<div>{ok[0]}&nbsp;&nbsp;&nbsp;&nbsp;'
+            if float(ok[1])>self.parent.pre_close:
+                b=f'<a style="color:red">{ok[1]}</a>&nbsp;&nbsp;&nbsp;&nbsp;'
+            else:
+                b = f'<a style="color:green">{ok[1]}</a>&nbsp;&nbsp;&nbsp;&nbsp;'
+            if not self.isIndex:
+                if i!=l-1:
+                    self.parent.time_share_data=f"{self.parent.time_share_data}{a}{b}{ok[2]}{flag}  {ok[3]}\n"
+                else:
+                    self.parent.time_share_data = f"{self.parent.time_share_data}{a}{b}{ok[2]}{flag}  {ok[3]}"
+                    if self.parent.now_close<self.parent.pre_close:
+                        self.parent.baseInformation.base_info['self.now_price_data'].setPalette(globalVariable.pegreen)
+                        self.parent.baseInformation.base_info['self.pctChg_data'].setPalette(globalVariable.pegreen)
+                    else:
+                        self.parent.baseInformation.base_info['self.now_price_data'].setPalette(globalVariable.pered)
+                        self.parent.baseInformation.base_info['self.pctChg_data'].setPalette(globalVariable.pered)
+                    self.parent.baseInformation.base_info['self.now_price_data'].setText(str(self.parent.now_close))
+                    self.parent.baseInformation.base_info['self.pctChg_data'].setText(f"{round(((self.parent.now_close-self.parent.pre_close)*100/self.parent.pre_close),2)}%")
 
     def deal_with_time_share_tick_data(self):
         self.parent.time_share_data=''
@@ -142,7 +173,7 @@ class RealTimeThread(QThread):
                 num=1
 
             url='http://25.push2.eastmoney.com/api/qt/stock/get?ut=fa5fd1943c7b386f172d6893dbfba10b&fltt=2&invt=2&volt=2&fields=f116,f84,f85,f162,f31,f32,f33,f34,f35,f36,f37,f38,f39,f40,f20,f19,f18,f17,f16,f15,f14,f13,f12,f11,f531&secid={}.{}&_=1666089246963'.format(num,code)
-            data=requests.get(url=url,headers=headers).json()['data']
+            data=requests.get(url=url,headers=headers,timeout=0.3).json()['data']
             for i in range(0,10,2):
                 if data[f'f{i+31}']!='' and data[f'f{i+31}']!='-':
                     if data[f'f{i+31}']>self.parent.pre_close:
@@ -188,8 +219,11 @@ class RealTimeThread(QThread):
 
     def run(self):
         self.isFlaseRealTime=False
-        self.get_time_share_tick_data()
-        self.flash_buy_sell_and_capital()
-        self.deal_with_time_share_tick_data()
+        try:
+            self.get_time_share_tick_data()
+            self.flash_buy_sell_and_capital()
+            self.deal_with_time_share_tick_data()
+        except Exception as e:
+            print('Reason:', e)
         self._signal.emit()
         self.isFlaseRealTime=True

@@ -7,7 +7,7 @@ from PySide6.QtCore import Signal
 import requests
 from pandas.core.frame import DataFrame
 import globalVariable
-
+import datetime
 class DealTimeShareThread(QtCore.QThread):
     #  通过类成员对象定义信号对象
     _signal = Signal()
@@ -113,7 +113,7 @@ class DealTimeShareThread(QtCore.QThread):
                 stock_code = 'SZ'+code
 
             url='https://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/ZYZBAjaxNew?type=0&code={}'.format(stock_code)
-            d=DataFrame(requests.get(url,headers=headers).json()['data']).T
+            d=DataFrame(requests.get(url,headers=headers,timeout=0.5).json()['data']).T
             l=d.loc['REPORT_DATE_NAME',0]
             list={'一季度':1,'中报':2,'三季报':3,'年报':4}
             A={1:'一',2:'二',3:'三',4:'四',5:'五'}
@@ -127,8 +127,11 @@ class DealTimeShareThread(QtCore.QThread):
         self.wait()
 
     def run(self):
-        self.deal_time_share_chart()
-        self._signal.emit()
-        if self.isTrue:
-            self.get_earning_and_pe_static()
+        try:
+            self.deal_time_share_chart()
+            self._signal.emit()
+            if self.isTrue:
+                self.get_earning_and_pe_static()
+        except Exception as e:
+            print('Reason:', e)
 
